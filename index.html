@@ -3,84 +3,15 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Generador de evaluaciones</title>
+    <meta name="theme-color" content="#172d2a" />
+    <meta name="description" content="NERIO acompaña tus cursos y organiza tu trabajo docente." />
+    <title>NERIO — Tu agente docente</title>
+    <link rel="icon" href="src/nerio-mark.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="src/styles.css" />
   </head>
   <body>
-    <main class="app-shell">
-      <section class="hero">
-        <div>
-          <p class="eyebrow">MVP para docentes</p>
-          <h1>Genera una evaluación lista para ajustar e imprimir</h1>
-          <p class="hero-copy">Ingresa los datos principales de tu clase y obtén una primera versión clara, ordenada y editable.</p>
-        </div>
-      </section>
-
-      <section class="workspace" aria-label="Generador de evaluaciones">
-        <form id="assessment-form" class="panel form-panel">
-          <div class="panel-header">
-            <h2>Datos de la evaluación</h2>
-            <p>Completa todos los campos para crear un borrador funcional.</p>
-          </div>
-
-          <label>
-            Asignatura
-            <input id="subject" name="subject" type="text" placeholder="Ej: Historia" required />
-          </label>
-
-          <label>
-            Curso
-            <input id="grade" name="grade" type="text" placeholder="Ej: 8° básico" required />
-          </label>
-
-          <label>
-            Temas a evaluar
-            <textarea id="topics" name="topics" rows="4" placeholder="Ej: Independencia, república, fuentes históricas" required></textarea>
-          </label>
-
-          <div class="form-grid">
-            <label>
-              Duración (minutos)
-              <input id="duration" name="duration" type="number" min="10" max="240" value="45" required />
-            </label>
-            <label>
-              Puntaje total
-              <input id="totalScore" name="totalScore" type="number" min="1" max="200" value="30" required />
-            </label>
-          </div>
-
-          <fieldset>
-            <legend>Tipo de evaluación</legend>
-            <div class="choice-row">
-              <label class="choice-card">
-                <input type="radio" name="assessmentType" value="desarrollo" checked />
-                <span>Desarrollo</span>
-              </label>
-              <label class="choice-card">
-                <input type="radio" name="assessmentType" value="multiple" />
-                <span>Múltiple opción</span>
-              </label>
-            </div>
-          </fieldset>
-
-          <button type="submit">Generar evaluación</button>
-        </form>
-
-        <section class="panel output-panel" aria-live="polite">
-          <div class="panel-header output-header">
-            <div>
-              <h2>Vista previa</h2>
-              <p>El resultado aparecerá aquí.</p>
-            </div>
-            <button id="print-button" class="secondary-button" type="button" disabled>Imprimir</button>
-          </div>
-          <article id="assessment-output" class="assessment-output empty-state">
-            <p>Completa el formulario para generar una evaluación con instrucciones, distribución de puntaje y preguntas sugeridas.</p>
-          </article>
-        </section>
-      </section>
-    </main>
-
+    <div id="app"></div>
+    <script src="src/education-catalog.js"></script>
     <script src="src/generator.js"></script>
     <script src="src/app.js"></script>
   </body>
