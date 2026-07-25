@@ -1,13 +1,13 @@
-# Aula — ayudante personal para docentes
+# NERIO — Tu agente docente
 
-Prototipo navegable de un espacio de trabajo para docentes, organizado alrededor de cada curso.
+Prototipo navegable de un agente personal para docentes, organizado alrededor de cada curso.
 
 ## Qué se puede probar
 
 - Crear y recorrer cursos.
 - Consultar avance, contenidos y próximas clases.
 - Agregar archivos de forma local a una biblioteca simulada.
-- Conversar con un ayudante simulado y generar clases, prácticos, evaluaciones o replanificaciones.
+- Conversar con Nerio y preparar clases, prácticos, evaluaciones o replanificaciones de demostración.
 - Editar, guardar localmente e imprimir los borradores.
 - Registrar una clase y actualizar el avance del curso.
 

@@ -74,9 +74,9 @@ const DEMO_COURSES = [
 ];
 
 const QUICK_ACTIONS = {
-  class: { label: 'Preparar próxima clase', prompt: 'Preparame la próxima clase.', title: 'Plan de clase — Período de entreguerras' },
-  practice: { label: 'Crear práctico', prompt: 'Creá un práctico sobre lo trabajado.', title: 'Práctico — Primera Guerra Mundial' },
-  assessment: { label: 'Crear evaluación', prompt: 'Creá una evaluación sobre lo trabajado hasta ahora.', title: 'Evaluación — Unidad 2' },
+  class: { label: 'Preparar próxima clase', prompt: 'Preparame la próxima clase.', title: 'Plan de clase' },
+  practice: { label: 'Crear práctico', prompt: 'Creá un práctico sobre lo trabajado.', title: 'Práctico' },
+  assessment: { label: 'Crear evaluación', prompt: 'Creá una evaluación sobre lo trabajado hasta ahora.', title: 'Evaluación' },
   replan: { label: 'Replanificar curso', prompt: 'Necesito replanificar el curso porque perdí dos clases.', title: 'Propuesta de replanificación' },
 };
 
@@ -130,7 +130,7 @@ function registerSession(course, session) {
 
 function generateDocument(action, course) {
   const topic = course.pendingTopics[0] || course.workedTopics.at(-1) || 'próximo contenido';
-  const common = { action, title: QUICK_ACTIONS[action].title, status: 'Borrador', saved: false };
+  const common = { action, title: `${QUICK_ACTIONS[action].title}${action === 'replan' ? '' : ` — ${topic}`}`, status: 'Borrador', saved: false };
   if (action === 'practice') {
     return { ...common, body: `PRÁCTICO: ${course.subject.toUpperCase()}\n\nTema: ${course.workedTopics.at(-1) || topic}\nDuración sugerida: 45 minutos\n\n1. Explicá con tus palabras el concepto central trabajado en clase.\n\n2. Analizá el material entregado e identificá dos ideas principales.\n\n3. Relacioná el tema con uno de los contenidos anteriores del curso.\n\n4. Elaborá una conclusión breve.\n\nCriterios de evaluación\n• Claridad conceptual\n• Uso de evidencias\n• Fundamentación de las respuestas` };
   }

@@ -1,4 +1,5 @@
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
 const { EDUCATION_CATALOG, resolveEducationSelection, educationSummary } = require('../src/education-catalog');
 const {
   DEMO_COURSES,
@@ -96,5 +97,18 @@ assert.equal(educationSummary({
   countryId: 'uy', systemId: 'formacion-educacion', careerId: 'profesorado-media',
   specialtyId: 'matematica', planId: 'plan-2023', yearId: 'ano-3', unitId: 'probabilidad-estadistica-ii',
 }).detail, 'Matemática · 3.º año · Probabilidad y Estadística II');
+
+const appSource = fs.readFileSync('src/app.js', 'utf8');
+const styles = fs.readFileSync('src/styles.css', 'utf8');
+const index = fs.readFileSync('index.html', 'utf8');
+assert(index.includes('<title>NERIO — Tu agente docente</title>'));
+assert(index.includes('src/nerio-mark.svg'));
+assert(appSource.includes('<span class="wordmark">NERIO</span>'));
+assert(appSource.includes('>Nerio</span>'));
+assert(appSource.includes('Otro / No aparece mi curso'));
+assert(styles.includes('--font-display:'));
+assert(styles.includes('--brand-900:'));
+assert(styles.includes('@media (max-width: 720px)'));
+assert(styles.includes('@media (prefers-reduced-motion: reduce)'));
 
 console.log('Todas las pruebas del prototipo pasaron.');

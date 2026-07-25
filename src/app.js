@@ -1,4 +1,5 @@
-const STORAGE_KEY = 'aula-prototype-courses-v1';
+const STORAGE_KEY = 'nerio-courses-v1';
+const LEGACY_STORAGE_KEY = 'aula-prototype-courses-v1';
 const app = document.querySelector('#app');
 
 const state = {
@@ -11,7 +12,7 @@ const state = {
 
 function loadCourses() {
   try {
-    const stored = localStorage.getItem(STORAGE_KEY);
+    const stored = localStorage.getItem(STORAGE_KEY) || localStorage.getItem(LEGACY_STORAGE_KEY);
     return stored ? JSON.parse(stored) : cloneDemoCourses();
   } catch {
     return cloneDemoCourses();
@@ -23,7 +24,8 @@ function persist() {
 }
 
 function parseRoute() {
-  const parts = location.hash.replace(/^#\/?/, '').split('/').filter(Boolean);
+  const [path] = location.hash.replace(/^#\/?/, '').split('?');
+  const parts = path.split('/').filter(Boolean);
   return { page: parts[0] || 'courses', courseId: parts[1] || null };
 }
 
@@ -54,6 +56,7 @@ function icon(name) {
     print: '<path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/>',
     send: '<path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/>',
     spark: '<path d="m12 3-1.5 4.5L6 9l4.5 1.5L12 15l1.5-4.5L18 9l-4.5-1.5Z"/><path d="m5 16-.8 2.2L2 19l2.2.8L5 22l.8-2.2L8 19l-2.2-.8Z"/>',
+    nerio: '<path d="M6 18V6l12 12V6"/><circle cx="18" cy="6" r="1.5" fill="currentColor" stroke="none"/>',
     upload: '<path d="M12 3v12m-5-7 5-5 5 5M5 21h14"/>',
   };
   return `<svg aria-hidden="true" viewBox="0 0 24 24">${paths[name] || paths.file}</svg>`;
@@ -61,18 +64,21 @@ function icon(name) {
 
 function topbar({ course, back, action = '' } = {}) {
   return `<header class="topbar">
-    <a class="brand" href="#/courses" aria-label="Ir a Mis cursos"><span class="brand-mark">A</span><span>Aula</span></a>
-    ${course ? `<div class="course-context"><span>${escapeHtml(course.subject)}</span><strong>${escapeHtml(course.name)}</strong></div>` : ''}
+    <a class="brand" href="#/courses" aria-label="NERIO, ir a Mis cursos"><span class="brand-mark" aria-hidden="true"><i></i><b></b></span><span class="wordmark">NERIO</span></a>
+    ${course ? `<div class="course-context"><span>Curso activo</span><strong>${escapeHtml(course.subject)}</strong><small>${escapeHtml(course.level)}</small></div>` : '<span class="brand-tagline">Tu agente docente.</span>'}
     <div class="topbar-actions">${action}${back ? `<a class="quiet-link" href="${back.href}">${icon('chevron')} ${back.label}</a>` : '<div class="avatar" title="Mariana Silva">MS</div>'}</div>
   </header>`;
 }
 
 function courseNav(course, active) {
   return `<nav class="course-nav" aria-label="Navegación del curso">
-    <a class="${active === 'course' ? 'active' : ''}" href="#/course/${course.id}">${icon('home')} Inicio</a>
-    <a class="${active === 'agent' ? 'active' : ''}" href="#/agent/${course.id}">${icon('spark')} Ayudante</a>
+    <a class="back-courses" href="#/courses">${icon('chevron')} <span>Mis cursos</span></a>
+    <span class="nav-divider"></span>
+    <a class="${active === 'course' ? 'active' : ''}" href="#/course/${course.id}">${icon('home')} <span>Curso</span></a>
+    <a class="nerio-nav ${active === 'agent' ? 'active' : ''}" href="#/agent/${course.id}">${icon('nerio')} <span>Nerio</span></a>
     <a class="${active === 'library' ? 'active' : ''}" href="#/library/${course.id}">${icon('library')} Biblioteca</a>
     <a class="${active === 'planning' ? 'active' : ''}" href="#/planning/${course.id}">${icon('calendar')} Planificación</a>
+    <a class="${active === 'register' ? 'active' : ''}" href="#/register/${course.id}">${icon('check')} Registro</a>
   </nav>`;
 }
 
@@ -85,9 +91,10 @@ function renderCourses() {
     <div class="course-color ${course.subject.toLowerCase().replaceAll('á', 'a')}">${course.subject.slice(0, 2).toUpperCase()}</div>
     <div class="course-card-copy"><span>${escapeHtml(course.level)}</span><h2>${escapeHtml(course.name)}</h2><p>${escapeHtml(course.subject)} · ${escapeHtml(course.group)}</p></div>
     <div class="next-class"><small>Próxima clase</small><strong>${escapeHtml(course.nextClass)}</strong></div>
+    <div class="course-progress"><span>${course.progress}%</span><i><b style="width:${course.progress}%"></b></i><small>avance</small></div>
     <span class="round-arrow">${icon('arrow')}</span>
   </a>`).join('');
-  app.innerHTML = pageShell(`<section class="page-heading"><div><p class="eyebrow">Tu espacio de trabajo</p><h1>Mis cursos</h1><p>Todo lo que necesitás para preparar y acompañar tus clases.</p></div><a class="primary-button" href="#/create">${icon('plus')} Crear curso</a></section><section class="course-list">${cards}</section>`, { className: 'page courses-page' });
+  app.innerHTML = pageShell(`<section class="page-heading courses-heading"><div><p class="eyebrow">Tu trabajo, en orden</p><h1>Mis cursos</h1><p>Nerio mantiene cada curso en contexto para que puedas concentrarte en enseñar.</p></div><a class="primary-button" href="#/create">${icon('plus')} Crear curso</a></section><section class="course-list" aria-label="Cursos">${cards}</section>`, { className: 'page courses-page' });
 }
 
 function renderCreate() {
@@ -113,7 +120,7 @@ function renderCreate() {
   const details = summary ? `<section class="progressive-section course-details"><p class="step-number">Último paso</p><h2>Completá los detalles</h2><div class="education-summary"><span>${icon('check')}</span><div><small>Tu curso</small><strong>${escapeHtml(summary.title)}</strong><p>${escapeHtml(summary.detail)}</p><em>${escapeHtml(summary.path.join(' → '))}</em></div><button type="button" data-reset-education>Cambiar</button></div><form id="course-form"><div class="field-grid"><label class="wide">Nombre para identificar el curso<input name="name" required value="${escapeHtml(summary.detail || summary.title)}"></label><label>Grupo<input name="group" required placeholder="Ej: 8.º 2"></label><label>Fecha de inicio<input type="date" name="startDate" required value="2026-03-02"></label><label>Fecha de finalización<input type="date" name="endDate" required value="2026-11-27"></label><fieldset class="wide"><legend>Días de clase</legend><div class="day-picker">${days.map(day => `<label><input type="checkbox" name="classDays" value="${day}"><span>${day.slice(0,3)}</span></label>`).join('')}</div></fieldset><label>Duración<select name="classDuration"><option value="45">45 minutos</option><option value="60">60 minutos</option><option value="90">90 minutos</option></select></label><label>Metodología<select name="methodology"><option>Mixta</option><option>Aprendizaje basado en problemas</option><option>Resolución de problemas</option><option>Taller</option><option>Expositiva</option></select></label><label class="wide">Preferencias del docente<textarea name="preferences" rows="3" placeholder="Ej: Actividades breves y ejemplos cercanos al grupo."></textarea></label></div><div class="form-actions"><a class="secondary-button" href="#/courses">Cancelar</a><button class="primary-button">Crear curso ${icon('arrow')}</button></div></form></section>` : '';
   const fallback = selection.systemId && !selection.custom && !summary ? '<button type="button" class="fallback-choice" data-custom-education>Otro / No aparece mi curso</button>' : '';
 
-  app.innerHTML = pageShell(`<section class="narrow-page"><div class="page-heading compact"><div><p class="eyebrow">Nuevo curso</p><h1>Creá tu curso</h1><p>Te mostramos únicamente las opciones que corresponden a tu recorrido educativo.</p></div></div><div class="progressive-card">${steps}${fallback}${details}</div></section>`, { back: { href: '#/courses', label: 'Mis cursos' }, className: 'page' });
+  app.innerHTML = pageShell(`<section class="narrow-page onboarding"><div class="page-heading compact"><div><p class="eyebrow">Un curso nuevo</p><h1>¿Dónde vas a enseñar?</h1><p>Empecemos por ubicar el curso. Nerio te muestra una decisión por vez.</p></div></div><div class="progressive-card">${steps}${fallback}${details}</div></section>`, { back: { href: '#/courses', label: 'Mis cursos' }, className: 'page' });
   bindEducationForm(summary, resolved);
 }
 
@@ -136,8 +143,8 @@ function bindEducationForm(summary, resolved) {
 
 function renderCourse(course) {
   const materials = course.materials.slice(0, 3).map((m) => `<li><span class="file-icon">${icon('file')}</span><div><strong>${escapeHtml(m.name)}</strong><small>${escapeHtml(m.type)} · ${escapeHtml(m.date)}</small></div></li>`).join('') || '<li class="empty-row">Todavía no agregaste materiales.</li>';
-  app.innerHTML = pageShell(`<section class="welcome-row"><div><p class="eyebrow">${escapeHtml(course.level)}</p><h1>Buen día, Mariana</h1><p>Esto es lo más importante de <strong>${escapeHtml(course.name)}</strong> hoy.</p></div><a class="register-button" href="#/register/${course.id}">${icon('check')} Registrar última clase</a></section>
-    <a class="assistant-prompt" href="#/agent/${course.id}"><span class="assistant-orb">${icon('spark')}</span><div><small>Tu ayudante para este curso</small><strong>¿Qué necesitás preparar?</strong><p>Pedime una clase, un práctico, una evaluación o un cambio en la planificación.</p></div><span class="prompt-arrow">${icon('arrow')}</span></a>
+  app.innerHTML = pageShell(`<section class="welcome-row"><div><p class="eyebrow">${escapeHtml(course.level)}</p><h1>${escapeHtml(course.name)}</h1><p><span class="knowledge-dot"></span> Nerio tiene presente la planificación, ${course.materials.length} materiales y el avance de este curso.</p></div><a class="register-button" href="#/register/${course.id}">${icon('check')} Registrar clase</a></section>
+    <a class="assistant-prompt" href="#/agent/${course.id}"><span class="assistant-orb">${icon('nerio')}</span><div><small>NERIO · ${escapeHtml(course.subject)}</small><strong>¿Qué necesitás preparar?</strong><p>Contame qué viene y lo organizamos juntos.</p></div><span class="prompt-arrow">${icon('arrow')}</span></a>
     <section class="dashboard-grid"><div class="main-column">
       <article class="next-card"><div class="card-heading"><div><p class="eyebrow">Próxima clase</p><h2>${escapeHtml(course.nextClass)}</h2></div><span class="calendar-badge">${icon('calendar')}</span></div><div class="next-topic"><small>Contenido previsto</small><strong>${escapeHtml(course.pendingTopics[0] || 'A definir')}</strong></div><a href="#/agent/${course.id}?action=class">Preparar esta clase ${icon('arrow')}</a></article>
       <article class="content-card"><div class="card-heading"><div><p class="eyebrow">Recorrido del curso</p><h2>Contenidos</h2></div><a href="#/planning/${course.id}">Ver planificación</a></div><div class="topic-columns"><div><h3><span class="status-dot done"></span> Trabajados</h3>${course.workedTopics.map(t => `<span class="topic-chip done">${escapeHtml(t)}</span>`).join('') || '<p class="muted">Aún no hay contenidos registrados.</p>'}</div><div><h3><span class="status-dot pending"></span> Pendientes</h3>${course.pendingTopics.map(t => `<span class="topic-chip">${escapeHtml(t)}</span>`).join('') || '<p class="muted">No hay pendientes.</p>'}</div></div></article>
@@ -145,8 +152,8 @@ function renderCourse(course) {
 }
 
 function renderLibrary(course) {
-  const rows = course.materials.map(m => `<li><span class="file-icon large">${icon('file')}</span><div><strong>${escapeHtml(m.name)}</strong><small>${escapeHtml(m.type)} · ${escapeHtml(m.size || 'Archivo local')} · ${escapeHtml(m.date)}</small></div><span class="ready">${icon('check')} Listo</span></li>`).join('');
-  app.innerHTML = pageShell(`<section class="page-heading"><div><p class="eyebrow">Contexto del curso</p><h1>Biblioteca</h1><p>Guardá aquí los materiales que usás para planificar ${escapeHtml(course.name)}.</p></div></section><section class="library-layout"><form id="upload-form" class="upload-card"><span class="upload-icon">${icon('upload')}</span><h2>Agregar un material</h2><p>La carga es local en este prototipo. El archivo se mostrará en la biblioteca, pero todavía no será procesado.</p><label class="file-input"><input id="material-file" type="file" required><span>Elegir archivo</span></label><label>Tipo de material<select id="material-type"><option>Programa</option><option>Bibliografía</option><option>Apuntes</option><option>Evaluación anterior</option><option>Otro material</option></select></label><button class="primary-button" type="submit">Agregar a la biblioteca</button></form><article class="library-card"><div class="card-heading"><div><p class="eyebrow">${course.materials.length} materiales</p><h2>Materiales del curso</h2></div></div><ul class="material-list">${rows || '<li class="empty-library"><span class="file-icon large">'+icon('book')+'</span><strong>Tu biblioteca está vacía</strong><p>Agregá el programa o tus apuntes para empezar.</p></li>'}</ul></article></section>`, { course, active: 'library', className: 'page' });
+  const rows = course.materials.map(m => `<li class="material-${m.type.toLowerCase().replaceAll(' ', '-')}"><span class="file-icon large">${icon('file')}</span><div><span class="material-kind">${escapeHtml(m.type)}</span><strong>${escapeHtml(m.name)}</strong><small>${escapeHtml(m.size || 'Archivo local')} · Agregado ${escapeHtml(m.date)}</small></div><span class="local-status">Guardado en este dispositivo</span></li>`).join('');
+  app.innerHTML = pageShell(`<section class="page-heading library-heading"><div><p class="eyebrow">Memoria académica</p><h1>Biblioteca</h1><p>El programa, la bibliografía y los materiales que sostienen este curso.</p></div><span class="future-source">Próximamente: fuentes vinculadas a Nerio</span></section><section class="library-layout"><form id="upload-form" class="upload-card"><span class="upload-icon">${icon('upload')}</span><h2>Sumar un material</h2><p>En esta etapa queda guardado en el curso, sin lectura automática.</p><label class="file-input"><input id="material-file" type="file" required><span>Elegir un archivo</span></label><label>¿Qué tipo de material es?<select id="material-type"><option>Programa</option><option>Bibliografía</option><option>Apuntes</option><option>Evaluación anterior</option><option>Otro material</option></select></label><button class="primary-button" type="submit">Guardar en la biblioteca</button></form><article class="library-card"><div class="card-heading"><div><p class="eyebrow">${course.materials.length} materiales</p><h2>En este curso</h2></div></div><ul class="material-list">${rows || '<li class="empty-library"><span class="file-icon large">'+icon('library')+'</span><strong>La memoria de este curso empieza acá</strong><p>Sumá el programa, apuntes o bibliografía cuando quieras.</p></li>'}</ul></article></section>`, { course, active: 'library', className: 'page' });
   document.querySelector('#upload-form').addEventListener('submit', (event) => {
     event.preventDefault(); const file = document.querySelector('#material-file').files[0]; if (!file) return;
     const updated = addMaterial(course, { name: file.name, type: document.querySelector('#material-type').value, size: formatBytes(file.size) });
@@ -158,10 +165,10 @@ function formatBytes(bytes) { return bytes < 1024 * 1024 ? `${Math.max(1, Math.r
 function replaceCourse(course) { state.courses = state.courses.map(c => c.id === course.id ? course : c); persist(); }
 
 function renderAgent(course) {
-  if (!state.messages.length) state.messages = [{ role: 'assistant', text: `Hola, Mariana. Ya tengo presente el contexto de ${course.name}. ¿Qué querés preparar hoy?` }];
+  if (!state.messages.length) state.messages = [{ role: 'assistant', text: `Tengo presente dónde está ${course.name} y qué viene después. ¿Qué preparamos?` }];
   const actions = Object.entries(QUICK_ACTIONS).map(([key, a]) => `<button class="quick-action" data-action="${key}">${icon(key === 'class' ? 'calendar' : key === 'replan' ? 'arrow' : 'file')} ${a.label}</button>`).join('');
-  const messages = state.messages.map(m => `<div class="message ${m.role}"><span>${m.role === 'assistant' ? icon('spark') : 'MS'}</span><div>${escapeHtml(m.text)}</div></div>`).join('');
-  app.innerHTML = pageShell(`<section class="agent-layout ${state.draft ? 'has-document' : ''}"><section class="chat-panel"><div class="chat-heading"><div><p class="eyebrow">Ayudante del curso</p><h1>¿Qué preparamos?</h1></div><span class="prototype-tag">Respuesta simulada</span></div><div class="quick-actions">${actions}</div><div class="messages" id="messages">${messages}</div><form id="chat-form" class="composer"><textarea id="chat-input" rows="1" placeholder="Escribí lo que necesitás…" aria-label="Mensaje para el ayudante"></textarea><button aria-label="Enviar mensaje">${icon('send')}</button></form><p class="composer-note">Este prototipo usa respuestas de demostración y no se conecta a una IA.</p></section>${state.draft ? documentPanel(state.draft) : `<aside class="document-placeholder"><span>${icon('file')}</span><h2>Tu material aparecerá aquí</h2><p>Elegí una acción o contame qué necesitás. Podrás editar el resultado antes de guardarlo.</p></aside>`}</section>`, { course, active: 'agent', className: 'agent-page' });
+  const messages = state.messages.map(m => `<div class="message ${m.role}"><span>${m.role === 'assistant' ? icon('nerio') : 'MS'}</span><div>${escapeHtml(m.text)}</div></div>`).join('');
+  app.innerHTML = pageShell(`<section class="agent-layout ${state.draft ? 'has-document' : ''}"><section class="chat-panel"><div class="agent-context"><span class="nerio-presence">${icon('nerio')}</span><div><p class="eyebrow">NERIO · Curso activo</p><h1>${escapeHtml(course.subject)}</h1><p>${escapeHtml(course.level)} · ${escapeHtml(course.group)}</p></div><span class="demo-status">Demostración</span></div><div class="conversation-intro"><h2>¿Qué preparamos?</h2><p>Podés escribirlo como se lo dirías a alguien que ya conoce tu curso.</p></div><div class="quick-actions">${actions}</div><div class="messages" id="messages">${messages}</div><form id="chat-form" class="composer"><textarea id="chat-input" rows="1" placeholder="Por ejemplo: Preparame la clase del viernes…" aria-label="Escribile a Nerio"></textarea><button aria-label="Pedirle a Nerio">${icon('send')}</button></form><p class="composer-note">Las respuestas están preparadas para esta demostración.</p></section>${state.draft ? documentPanel(state.draft) : `<aside class="document-placeholder"><span class="document-watermark">N</span><p class="eyebrow">Mesa de trabajo</p><h2>Lo que prepares con Nerio va a aparecer acá</h2><p>Podrás revisarlo, editarlo y llevarlo a clase.</p></aside>`}</section>`, { course, active: 'agent', className: 'agent-page' });
   document.querySelectorAll('[data-action]').forEach(button => button.addEventListener('click', () => simulateAgent(button.dataset.action, course)));
   document.querySelector('#chat-form').addEventListener('submit', event => { event.preventDefault(); const input = document.querySelector('#chat-input'); if (!input.value.trim()) return; const action = inferAction(input.value); state.messages.push({ role: 'user', text: input.value.trim() }); input.value = ''; simulateAgent(action, course, false); });
   bindDocumentActions(course);
@@ -175,7 +182,7 @@ function simulateAgent(action, course, includeUser = true) {
 }
 
 function documentPanel(draft) {
-  return `<aside class="document-panel"><header><div><p class="eyebrow">${escapeHtml(draft.status)}</p><input id="document-title" value="${escapeHtml(draft.title)}" aria-label="Título del documento"></div><div class="document-actions"><button id="print-document" class="icon-button" title="Imprimir o guardar como PDF">${icon('print')}</button><button id="save-document" class="save-button">${draft.saved ? icon('check') + ' Guardado' : 'Guardar'}</button></div></header><div class="paper"><textarea id="document-body" aria-label="Contenido editable">${escapeHtml(draft.body)}</textarea></div><footer><span>Podés editar directamente este borrador.</span><button id="request-change" class="secondary-button">Pedir un cambio</button></footer></aside>`;
+  return `<aside class="document-panel"><header><div><p class="eyebrow">Documento · ${escapeHtml(draft.status)}</p><input id="document-title" value="${escapeHtml(draft.title)}" aria-label="Título del documento"></div><div class="document-actions"><button id="print-document" class="icon-button" title="Imprimir o guardar como PDF" aria-label="Imprimir o guardar como PDF">${icon('print')}</button><button id="save-document" class="save-button">${draft.saved ? icon('check') + ' Guardado' : 'Guardar'}</button></div></header><div class="paper"><textarea id="document-body" aria-label="Contenido editable">${escapeHtml(draft.body)}</textarea></div><footer><span>El documento es editable.</span><button id="request-change" class="secondary-button">Pedirle un cambio a Nerio</button></footer></aside>`;
 }
 
 function bindDocumentActions(course) {
@@ -188,13 +195,13 @@ function bindDocumentActions(course) {
 
 function renderRegister(course) {
   const allTopics = [...new Set([...course.pendingTopics, ...course.workedTopics])];
-  app.innerHTML = pageShell(`<section class="modal-page"><div class="register-card"><div class="page-heading compact"><div><p class="eyebrow">Seguimiento del curso</p><h1>¿Cómo fue la última clase?</h1><p>Este registro mantiene actualizado el avance de tu curso.</p></div></div><form id="session-form"><fieldset><legend>Estado de la clase</legend><div class="status-picker"><label><input type="radio" name="status" value="realizada" checked><span>${icon('check')}<strong>Realizada</strong><small>Se completó lo previsto</small></span></label><label><input type="radio" name="status" value="parcial"><span>½<strong>Parcialmente</strong><small>Quedaron temas pendientes</small></span></label><label><input type="radio" name="status" value="no-realizada"><span>—<strong>No realizada</strong><small>La clase no tuvo lugar</small></span></label></div></fieldset><fieldset><legend>Contenidos trabajados</legend><p class="field-help">Seleccioná los que corresponden o agregá uno nuevo.</p><div class="topic-picker">${allTopics.map(t => `<label><input type="checkbox" name="topics" value="${escapeHtml(t)}"><span>${escapeHtml(t)}</span></label>`).join('')}</div><label>Otro contenido<input name="otherTopic" placeholder="Escribí un contenido si no está en la lista"></label></fieldset><label>Nota de la clase <span class="optional">Opcional</span><textarea name="note" rows="3" placeholder="Ej: El grupo necesitó más tiempo para la actividad."></textarea></label><div class="form-actions"><a class="secondary-button" href="#/course/${course.id}">Cancelar</a><button class="primary-button">Guardar registro</button></div></form></div></section>`, { course, className: 'page' });
+  app.innerHTML = pageShell(`<section class="modal-page"><div class="register-card"><div class="page-heading compact"><div><p class="eyebrow">Registro</p><h1>¿Cómo fue la última clase?</h1><p>Con este dato, Nerio mantiene el curso al día.</p></div></div><form id="session-form"><fieldset><legend>Estado de la clase</legend><div class="status-picker"><label><input type="radio" name="status" value="realizada" checked><span>${icon('check')}<strong>Realizada</strong><small>Se completó lo previsto</small></span></label><label><input type="radio" name="status" value="parcial"><span>½<strong>Parcialmente</strong><small>Quedaron temas pendientes</small></span></label><label><input type="radio" name="status" value="no-realizada"><span>—<strong>No realizada</strong><small>La clase no tuvo lugar</small></span></label></div></fieldset><fieldset><legend>Contenidos trabajados</legend><p class="field-help">Seleccioná los que corresponden o agregá uno nuevo.</p><div class="topic-picker">${allTopics.map(t => `<label><input type="checkbox" name="topics" value="${escapeHtml(t)}"><span>${escapeHtml(t)}</span></label>`).join('')}</div><label>Otro contenido<input name="otherTopic" placeholder="Escribí un contenido si no está en la lista"></label></fieldset><label>Nota de la clase <span class="optional">Opcional</span><textarea name="note" rows="3" placeholder="Ej: El grupo necesitó más tiempo para la actividad."></textarea></label><div class="form-actions"><a class="secondary-button" href="#/course/${course.id}">Cancelar</a><button class="primary-button">Guardar registro</button></div></form></div></section>`, { course, active: 'register', className: 'page' });
   document.querySelector('#session-form').addEventListener('submit', event => { event.preventDefault(); const data = new FormData(event.currentTarget); const topics = data.getAll('topics'); if (data.get('otherTopic')) topics.push(data.get('otherTopic')); const updated = registerSession(course, { status: data.get('status'), topics, note: data.get('note') }); replaceCourse(updated); navigate(`/course/${course.id}`); setTimeout(() => showToast('Clase registrada. Actualizamos el avance del curso.'), 50); });
 }
 
 function renderPlanning(course) {
   const topics = [...course.workedTopics.map(t => ({ t, done: true })), ...course.pendingTopics.map(t => ({ t, done: false }))];
-  app.innerHTML = pageShell(`<section class="page-heading"><div><p class="eyebrow">Planificación</p><h1>El recorrido de ${escapeHtml(course.name)}</h1><p>Una vista sencilla de lo trabajado y lo que viene.</p></div><a class="secondary-button" href="#/agent/${course.id}?action=replan">Replanificar con mi ayudante</a></section><section class="planning-card"><div class="progress-header"><div><strong>${course.progress}% del curso</strong><span>${course.workedTopics.length} contenidos trabajados · ${course.pendingTopics.length} pendientes</span></div><div class="progress-track"><i style="width:${course.progress}%"></i></div></div><ol class="timeline">${topics.map((item, index) => `<li class="${item.done ? 'done' : ''}"><span>${item.done ? icon('check') : index + 1}</span><div><small>${item.done ? 'Trabajado' : 'Pendiente'}</small><strong>${escapeHtml(item.t)}</strong></div></li>`).join('')}</ol></section>`, { course, active: 'planning', className: 'page' });
+  app.innerHTML = pageShell(`<section class="page-heading"><div><p class="eyebrow">Planificación</p><h1>El recorrido de ${escapeHtml(course.name)}</h1><p>Lo trabajado y lo que viene, en una sola línea de tiempo.</p></div><a class="secondary-button" href="#/agent/${course.id}?action=replan">Revisar con Nerio</a></section><section class="planning-card"><div class="progress-header"><div><strong>${course.progress}% del curso</strong><span>${course.workedTopics.length} contenidos trabajados · ${course.pendingTopics.length} pendientes</span></div><div class="progress-track"><i style="width:${course.progress}%"></i></div></div><ol class="timeline">${topics.map((item, index) => `<li class="${item.done ? 'done' : ''}"><span>${item.done ? icon('check') : index + 1}</span><div><small>${item.done ? 'Trabajado' : 'Pendiente'}</small><strong>${escapeHtml(item.t)}</strong></div></li>`).join('')}</ol></section>`, { course, active: 'planning', className: 'page' });
 }
 
 function showToast(message) { document.querySelector('.toast')?.remove(); const toast = document.createElement('div'); toast.className = 'toast'; toast.innerHTML = `${icon('check')} ${escapeHtml(message)}`; document.body.append(toast); setTimeout(() => toast.remove(), 3200); }
