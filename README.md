@@ -1,18 +1,30 @@
-# Generador de evaluaciones
+# NERIO — Tu agente docente
 
-MVP web para docentes que permite crear un borrador de evaluación desde datos básicos de la clase.
+Prototipo navegable de un agente personal para docentes, organizado alrededor de cada curso.
 
-## Arquitectura elegida
+## Qué se puede probar
 
-El proyecto usa una arquitectura estática y sencilla:
+- Crear y recorrer cursos.
+- Consultar avance, contenidos y próximas clases.
+- Agregar archivos de forma local a una biblioteca simulada.
+- Conversar con Nerio y preparar clases, prácticos, evaluaciones o replanificaciones de demostración.
+- Editar, guardar localmente e imprimir los borradores.
+- Registrar una clase y actualizar el avance del curso.
 
-- `index.html`: estructura principal de la aplicación.
-- `src/styles.css`: estilos visuales responsivos y reglas de impresión.
-- `src/generator.js`: lógica pura para separar temas, distribuir puntaje y crear preguntas sugeridas.
-- `src/app.js`: conexión entre el formulario, la vista previa y el botón de impresión.
-- `tests/generator.test.js`: pruebas de la lógica del generador con Node.js.
+- `index.html`: punto de entrada de la aplicación.
+- `src/styles.css`: sistema visual responsive y reglas de impresión.
+- `src/education-catalog.js`: catálogo educativo versionado e independiente de la interfaz.
+- `src/generator.js`: datos demo y operaciones puras del dominio del curso.
+- `src/app.js`: navegación, pantallas y persistencia local del prototipo.
+- `tests/generator.test.js`: pruebas de las operaciones principales.
 
-No requiere base de datos, backend, servicios pagos ni instalación de dependencias.
+No usa IA real, autenticación, backend ni base de datos. Los cambios se conservan en `localStorage` y la selección de archivos es únicamente una simulación local; ningún archivo se envía ni se procesa.
+
+## Catálogo educativo
+
+El flujo de creación consulta `src/education-catalog.js` en lugar de definir opciones dentro de la interfaz. El catálogo modela país, sistema, organismo, plan, carrera, especialidad o trayecto, grado o año y unidad curricular. Cada unidad ya admite metadatos de programa oficial, aunque el prototipo no descarga programas.
+
+La primera versión incluye DGES (EBI y EMS 2023) y CFE (Profesorado de Educación Media, además de estructuras iniciales para Maestro/Profesor Técnico y Educador Social). Los identificadores estables, versiones y estados permiten agregar planes o países sin reescribir el formulario progresivo.
 
 ## Cómo probarlo
 
