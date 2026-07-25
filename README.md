@@ -13,6 +13,7 @@ Prototipo navegable de un agente personal para docentes, organizado alrededor de
 
 - `index.html`: punto de entrada de la aplicación.
 - `src/styles.css`: sistema visual responsive y reglas de impresión.
+- `src/nerio-mark.svg`, `src/nerio-wordmark.svg` y `src/nerio-lockup.svg`: sistema de marca escalable.
 - `src/education-catalog.js`: catálogo educativo versionado e independiente de la interfaz.
 - `src/generator.js`: datos demo y operaciones puras del dominio del curso.
 - `src/app.js`: navegación, pantallas y persistencia local del prototipo.

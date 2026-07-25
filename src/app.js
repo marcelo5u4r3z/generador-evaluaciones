@@ -8,6 +8,7 @@ const state = {
   draft: null,
   messages: [],
   educationDraft: { countryId: 'uy' },
+  handledActionKey: null,
 };
 
 function loadCourses() {
@@ -24,9 +25,9 @@ function persist() {
 }
 
 function parseRoute() {
-  const [path] = location.hash.replace(/^#\/?/, '').split('?');
+  const [path, query = ''] = location.hash.replace(/^#\/?/, '').split('?');
   const parts = path.split('/').filter(Boolean);
-  return { page: parts[0] || 'courses', courseId: parts[1] || null };
+  return { page: parts[0] || 'courses', courseId: parts[1] || null, action: new URLSearchParams(query).get('action') };
 }
 
 function navigate(path) {
@@ -55,8 +56,7 @@ function icon(name) {
     plus: '<path d="M12 5v14M5 12h14"/>',
     print: '<path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/>',
     send: '<path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/>',
-    spark: '<path d="m12 3-1.5 4.5L6 9l4.5 1.5L12 15l1.5-4.5L18 9l-4.5-1.5Z"/><path d="m5 16-.8 2.2L2 19l2.2.8L5 22l.8-2.2L8 19l-2.2-.8Z"/>',
-    nerio: '<path d="M6 18V6l12 12V6"/><circle cx="18" cy="6" r="1.5" fill="currentColor" stroke="none"/>',
+    nerio: '<path d="M6 18V6M6.5 6.5l11 11M18 18V6"/><circle cx="20" cy="20" r="1.6" fill="currentColor" stroke="none"/>',
     upload: '<path d="M12 3v12m-5-7 5-5 5 5M5 21h14"/>',
   };
   return `<svg aria-hidden="true" viewBox="0 0 24 24">${paths[name] || paths.file}</svg>`;
@@ -64,7 +64,7 @@ function icon(name) {
 
 function topbar({ course, back, action = '' } = {}) {
   return `<header class="topbar">
-    <a class="brand" href="#/courses" aria-label="NERIO, ir a Mis cursos"><span class="brand-mark" aria-hidden="true"><i></i><b></b></span><span class="wordmark">NERIO</span></a>
+    <a class="brand" href="#/courses" aria-label="NERIO, ir a Mis cursos"><img class="brand-mark" src="src/nerio-mark.svg" alt=""><span class="wordmark">NERIO</span></a>
     ${course ? `<div class="course-context"><span>Curso activo</span><strong>${escapeHtml(course.subject)}</strong><small>${escapeHtml(course.level)}</small></div>` : '<span class="brand-tagline">Tu agente docente.</span>'}
     <div class="topbar-actions">${action}${back ? `<a class="quiet-link" href="${back.href}">${icon('chevron')} ${back.label}</a>` : '<div class="avatar" title="Mariana Silva">MS</div>'}</div>
   </header>`;
@@ -144,15 +144,19 @@ function bindEducationForm(summary, resolved) {
 function renderCourse(course) {
   const materials = course.materials.slice(0, 3).map((m) => `<li><span class="file-icon">${icon('file')}</span><div><strong>${escapeHtml(m.name)}</strong><small>${escapeHtml(m.type)} · ${escapeHtml(m.date)}</small></div></li>`).join('') || '<li class="empty-row">Todavía no agregaste materiales.</li>';
   app.innerHTML = pageShell(`<section class="welcome-row"><div><p class="eyebrow">${escapeHtml(course.level)}</p><h1>${escapeHtml(course.name)}</h1><p><span class="knowledge-dot"></span> Nerio tiene presente la planificación, ${course.materials.length} materiales y el avance de este curso.</p></div><a class="register-button" href="#/register/${course.id}">${icon('check')} Registrar clase</a></section>
-    <a class="assistant-prompt" href="#/agent/${course.id}"><span class="assistant-orb">${icon('nerio')}</span><div><small>NERIO · ${escapeHtml(course.subject)}</small><strong>¿Qué necesitás preparar?</strong><p>Contame qué viene y lo organizamos juntos.</p></div><span class="prompt-arrow">${icon('arrow')}</span></a>
-    <section class="dashboard-grid"><div class="main-column">
-      <article class="next-card"><div class="card-heading"><div><p class="eyebrow">Próxima clase</p><h2>${escapeHtml(course.nextClass)}</h2></div><span class="calendar-badge">${icon('calendar')}</span></div><div class="next-topic"><small>Contenido previsto</small><strong>${escapeHtml(course.pendingTopics[0] || 'A definir')}</strong></div><a href="#/agent/${course.id}?action=class">Preparar esta clase ${icon('arrow')}</a></article>
-      <article class="content-card"><div class="card-heading"><div><p class="eyebrow">Recorrido del curso</p><h2>Contenidos</h2></div><a href="#/planning/${course.id}">Ver planificación</a></div><div class="topic-columns"><div><h3><span class="status-dot done"></span> Trabajados</h3>${course.workedTopics.map(t => `<span class="topic-chip done">${escapeHtml(t)}</span>`).join('') || '<p class="muted">Aún no hay contenidos registrados.</p>'}</div><div><h3><span class="status-dot pending"></span> Pendientes</h3>${course.pendingTopics.map(t => `<span class="topic-chip">${escapeHtml(t)}</span>`).join('') || '<p class="muted">No hay pendientes.</p>'}</div></div></article>
-    </div><aside class="side-column"><article class="progress-card"><div class="progress-ring" style="--progress:${course.progress * 3.6}deg"><span>${course.progress}%</span></div><div><p class="eyebrow">Avance estimado</p><h2>Vas por buen camino</h2><p>Basado en la planificación y las clases registradas.</p></div></article><article class="materials-card"><div class="card-heading"><div><p class="eyebrow">Biblioteca</p><h2>Materiales recientes</h2></div><a href="#/library/${course.id}">Ver todos</a></div><ul>${materials}</ul><a class="text-action" href="#/library/${course.id}">${icon('plus')} Agregar material</a></article></aside></section>`, { course, active: 'course', className: 'page course-home' });
+    <section class="course-snapshot" aria-label="Estado del curso"><div><small>Próxima clase</small><strong>${escapeHtml(course.nextClass)}</strong></div><div><small>Estamos por trabajar</small><strong>${escapeHtml(course.pendingTopics[0] || 'A definir')}</strong></div><div class="snapshot-progress"><small>Avance del curso</small><strong>${course.progress}%</strong><i><b style="width:${course.progress}%"></b></i></div></section>
+    <section class="create-hub"><div class="section-intro"><div><p class="eyebrow">Prepará lo que sigue</p><h2>¿Qué querés hacer?</h2></div><p>Nerio ya conoce el curso. Elegí una acción y empezá desde ahí.</p></div><div class="creation-actions">
+      <a class="creation-action primary" href="#/agent/${course.id}?action=class"><span>${icon('calendar')}</span><strong>Preparar próxima clase</strong><small>${escapeHtml(course.pendingTopics[0] || 'Próximo contenido')}</small></a>
+      <a class="creation-action" href="#/agent/${course.id}?action=assessment"><span>${icon('file')}</span><strong>Crear evaluación</strong><small>Sobre lo trabajado</small></a>
+      <a class="creation-action" href="#/agent/${course.id}?action=practice"><span>${icon('check')}</span><strong>Crear práctico</strong><small>Actividad y consignas</small></a>
+      <a class="creation-action" href="#/library/${course.id}"><span>${icon('upload')}</span><strong>Subir material</strong><small>Sumar contexto al curso</small></a>
+      <a class="creation-action" href="#/register/${course.id}"><span>${icon('plus')}</span><strong>Registrar lo que di</strong><small>Mantener el avance al día</small></a>
+    </div><a class="ask-nerio" href="#/agent/${course.id}"><span class="presence-dot"></span><div><small>NERIO</small><strong>Preguntame o pedime algo distinto</strong></div>${icon('arrow')}</a></section>
+    <section class="dashboard-grid"><div class="main-column"><article class="content-card"><div class="card-heading"><div><p class="eyebrow">Dónde estamos</p><h2>Contenidos del curso</h2></div><a href="#/planning/${course.id}">Ver planificación</a></div><div class="topic-columns"><div><h3><span class="status-dot done"></span> Trabajados</h3>${course.workedTopics.map(t => `<span class="topic-chip done">${escapeHtml(t)}</span>`).join('') || '<p class="muted">Aún no hay contenidos registrados.</p>'}</div><div><h3><span class="status-dot pending"></span> Lo que viene</h3>${course.pendingTopics.map(t => `<span class="topic-chip">${escapeHtml(t)}</span>`).join('') || '<p class="muted">No hay pendientes.</p>'}</div></div></article></div><aside class="side-column"><article class="materials-card"><div class="card-heading"><div><p class="eyebrow">Biblioteca</p><h2>Materiales a mano</h2></div><a href="#/library/${course.id}">Ver todos</a></div><ul>${materials}</ul><a class="text-action" href="#/library/${course.id}">${icon('plus')} Agregar material</a></article></aside></section>`, { course, active: 'course', className: 'page course-home' });
 }
 
 function renderLibrary(course) {
-  const rows = course.materials.map(m => `<li class="material-${m.type.toLowerCase().replaceAll(' ', '-')}"><span class="file-icon large">${icon('file')}</span><div><span class="material-kind">${escapeHtml(m.type)}</span><strong>${escapeHtml(m.name)}</strong><small>${escapeHtml(m.size || 'Archivo local')} · Agregado ${escapeHtml(m.date)}</small></div><span class="local-status">Guardado en este dispositivo</span></li>`).join('');
+  const rows = course.materials.map(m => `<li class="material-${m.type.toLowerCase().replaceAll(' ', '-')}"><span class="material-preview" aria-hidden="true">${icon('file')}<i></i><i></i><i></i></span><div><span class="material-kind">${escapeHtml(m.type)}</span><strong>${escapeHtml(m.name)}</strong><small>${escapeHtml(m.size || 'Archivo local')} · Agregado ${escapeHtml(m.date)}</small><span class="local-status">Guardado en este dispositivo</span></div></li>`).join('');
   app.innerHTML = pageShell(`<section class="page-heading library-heading"><div><p class="eyebrow">Memoria académica</p><h1>Biblioteca</h1><p>El programa, la bibliografía y los materiales que sostienen este curso.</p></div><span class="future-source">Próximamente: fuentes vinculadas a Nerio</span></section><section class="library-layout"><form id="upload-form" class="upload-card"><span class="upload-icon">${icon('upload')}</span><h2>Sumar un material</h2><p>En esta etapa queda guardado en el curso, sin lectura automática.</p><label class="file-input"><input id="material-file" type="file" required><span>Elegir un archivo</span></label><label>¿Qué tipo de material es?<select id="material-type"><option>Programa</option><option>Bibliografía</option><option>Apuntes</option><option>Evaluación anterior</option><option>Otro material</option></select></label><button class="primary-button" type="submit">Guardar en la biblioteca</button></form><article class="library-card"><div class="card-heading"><div><p class="eyebrow">${course.materials.length} materiales</p><h2>En este curso</h2></div></div><ul class="material-list">${rows || '<li class="empty-library"><span class="file-icon large">'+icon('library')+'</span><strong>La memoria de este curso empieza acá</strong><p>Sumá el programa, apuntes o bibliografía cuando quieras.</p></li>'}</ul></article></section>`, { course, active: 'library', className: 'page' });
   document.querySelector('#upload-form').addEventListener('submit', (event) => {
     event.preventDefault(); const file = document.querySelector('#material-file').files[0]; if (!file) return;
@@ -166,6 +170,13 @@ function replaceCourse(course) { state.courses = state.courses.map(c => c.id ===
 
 function renderAgent(course) {
   if (!state.messages.length) state.messages = [{ role: 'assistant', text: `Tengo presente dónde está ${course.name} y qué viene después. ¿Qué preparamos?` }];
+  const actionKey = `${course.id}:${state.route.action}`;
+  if (QUICK_ACTIONS[state.route.action] && state.handledActionKey !== actionKey) {
+    state.messages.push({ role: 'user', text: QUICK_ACTIONS[state.route.action].prompt });
+    state.messages.push({ role: 'assistant', text: `Ya preparé un primer borrador con el contexto de ${course.name}. Podés editarlo o pedirme un cambio.` });
+    state.draft = generateDocument(state.route.action, course);
+    state.handledActionKey = actionKey;
+  }
   const actions = Object.entries(QUICK_ACTIONS).map(([key, a]) => `<button class="quick-action" data-action="${key}">${icon(key === 'class' ? 'calendar' : key === 'replan' ? 'arrow' : 'file')} ${a.label}</button>`).join('');
   const messages = state.messages.map(m => `<div class="message ${m.role}"><span>${m.role === 'assistant' ? icon('nerio') : 'MS'}</span><div>${escapeHtml(m.text)}</div></div>`).join('');
   app.innerHTML = pageShell(`<section class="agent-layout ${state.draft ? 'has-document' : ''}"><section class="chat-panel"><div class="agent-context"><span class="nerio-presence">${icon('nerio')}</span><div><p class="eyebrow">NERIO · Curso activo</p><h1>${escapeHtml(course.subject)}</h1><p>${escapeHtml(course.level)} · ${escapeHtml(course.group)}</p></div><span class="demo-status">Demostración</span></div><div class="conversation-intro"><h2>¿Qué preparamos?</h2><p>Podés escribirlo como se lo dirías a alguien que ya conoce tu curso.</p></div><div class="quick-actions">${actions}</div><div class="messages" id="messages">${messages}</div><form id="chat-form" class="composer"><textarea id="chat-input" rows="1" placeholder="Por ejemplo: Preparame la clase del viernes…" aria-label="Escribile a Nerio"></textarea><button aria-label="Pedirle a Nerio">${icon('send')}</button></form><p class="composer-note">Las respuestas están preparadas para esta demostración.</p></section>${state.draft ? documentPanel(state.draft) : `<aside class="document-placeholder"><span class="document-watermark">N</span><p class="eyebrow">Mesa de trabajo</p><h2>Lo que prepares con Nerio va a aparecer acá</h2><p>Podrás revisarlo, editarlo y llevarlo a clase.</p></aside>`}</section>`, { course, active: 'agent', className: 'agent-page' });
