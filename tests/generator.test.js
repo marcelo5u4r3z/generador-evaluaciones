@@ -1,4 +1,5 @@
 const assert = require('node:assert/strict');
+const { EDUCATION_CATALOG, resolveEducationSelection, educationSummary } = require('../src/education-catalog');
 const {
   DEMO_COURSES,
   cloneDemoCourses,
@@ -42,20 +43,20 @@ assert.equal(course.materials.length, 0, 'la actualización de materiales no mut
 const demo = cloneDemoCourses()[0];
 const completed = registerSession(demo, {
   status: 'realizada',
-  topics: ['Período de entreguerras'],
+  topics: ['Ecuaciones'],
   note: 'Buen avance.',
 });
-assert(completed.workedTopics.includes('Período de entreguerras'));
-assert(!completed.pendingTopics.includes('Período de entreguerras'));
+assert(completed.workedTopics.includes('Ecuaciones'));
+assert(!completed.pendingTopics.includes('Ecuaciones'));
 assert.equal(completed.progress, 44);
 
 const missed = registerSession(demo, {
   status: 'no-realizada',
-  topics: ['Período de entreguerras'],
+  topics: ['Ecuaciones'],
   note: 'Feriado.',
 });
 assert.equal(missed.progress, demo.progress);
-assert(!missed.workedTopics.includes('Período de entreguerras'));
+assert(!missed.workedTopics.includes('Ecuaciones'));
 
 for (const action of ['class', 'practice', 'assessment', 'replan']) {
   const document = generateDocument(action, demo);
@@ -64,5 +65,36 @@ for (const action of ['class', 'practice', 'assessment', 'replan']) {
   assert(document.body.length > 100);
   assert.equal(document.status, 'Borrador');
 }
+
+const uruguay = EDUCATION_CATALOG.countries.find(({ code }) => code === 'UY');
+assert(uruguay, 'Uruguay existe en el catálogo');
+const secondary = uruguay.systems.find(({ id }) => id === 'secundaria');
+assert.equal(secondary.agency.name, 'DGES');
+const ebi = secondary.programs.find(({ id }) => id === 'ebi');
+assert.deepEqual(ebi.grades.map(({ name }) => name), ['7.º grado', '8.º grado', '9.º grado']);
+
+const lifeSciences = resolveEducationSelection({
+  countryId: 'uy', systemId: 'secundaria', programId: 'ems-2023', gradeId: 'ems-3',
+  trackId: 'ciencias-vida', unitId: 'matematica-cv',
+});
+assert.equal(lifeSciences.track.name, 'Ciencias de la Vida');
+assert.equal(lifeSciences.curriculumUnit.name, 'Matemática-CV');
+assert.equal(lifeSciences.curriculumUnit.officialProgram.available, false);
+
+const cfe = uruguay.systems.find(({ id }) => id === 'formacion-educacion');
+assert.equal(cfe.agency.name, 'CFE');
+const professor = cfe.careers.find(({ id }) => id === 'profesorado-media');
+assert.equal(professor.specialties.length, 18);
+const teacherMath = resolveEducationSelection({
+  countryId: 'uy', systemId: 'formacion-educacion', careerId: 'profesorado-media',
+  specialtyId: 'matematica', planId: 'plan-2023', yearId: 'ano-3', unitId: 'probabilidad-estadistica-ii',
+});
+assert.equal(teacherMath.plan.version, '2023');
+assert.equal(teacherMath.year.name, '3.º año');
+assert.equal(teacherMath.curriculumUnit.name, 'Probabilidad y Estadística II');
+assert.equal(educationSummary({
+  countryId: 'uy', systemId: 'formacion-educacion', careerId: 'profesorado-media',
+  specialtyId: 'matematica', planId: 'plan-2023', yearId: 'ano-3', unitId: 'probabilidad-estadistica-ii',
+}).detail, 'Matemática · 3.º año · Probabilidad y Estadística II');
 
 console.log('Todas las pruebas del prototipo pasaron.');

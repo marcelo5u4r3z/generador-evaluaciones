@@ -6,6 +6,7 @@ const state = {
   route: parseRoute(),
   draft: null,
   messages: [],
+  educationDraft: { countryId: 'uy' },
 };
 
 function loadCourses() {
@@ -90,19 +91,46 @@ function renderCourses() {
 }
 
 function renderCreate() {
+  const selection = state.educationDraft;
+  const resolved = resolveEducationSelection(selection);
+  const country = EDUCATION_CATALOG.countries[0];
+  const choiceCards = (items, key) => `<div class="education-choices">${items.filter(i => i.active).map(item => `<button type="button" class="education-choice ${selection[key] === item.id ? 'selected' : ''}" data-education-key="${key}" data-education-value="${item.id}"><strong>${escapeHtml(item.name)}</strong>${item.agency ? `<small>${escapeHtml(item.agency.name)}</small>` : ''}${icon('arrow')}</button>`).join('')}<button type="button" class="education-choice custom ${selection.custom ? 'selected' : ''}" data-custom-education><strong>Otro / No aparece mi curso</strong><small>Podrás escribir los datos manualmente</small>${icon('arrow')}</button></div>`;
+  const selectField = (label, key, items) => items?.length ? `<label class="progressive-field">${label}<select data-education-select="${key}"><option value="">Seleccionar…</option>${items.filter(i => i.active).map(item => `<option value="${item.id}" ${selection[key] === item.id ? 'selected' : ''}>${escapeHtml(item.name)}</option>`).join('')}</select></label>` : '';
+
+  let steps = `<div class="selection-step active"><span>País</span><strong>🇺🇾 Uruguay</strong></div>`;
+  if (!selection.systemId && !selection.custom) steps += `<section class="progressive-section"><p class="step-number">Paso 1</p><h2>¿Dónde enseñás?</h2><p>Elegí el ámbito que corresponde a tu curso.</p>${choiceCards(country.systems, 'systemId')}</section>`;
+  if (resolved.system?.programs) {
+    steps += `<section class="progressive-section"><p class="step-number">Paso 2</p><h2>¿Qué nivel y plan?</h2>${selectField('Propuesta educativa', 'programId', resolved.system.programs)}${resolved.program ? selectField('Grado', 'gradeId', resolved.program.grades) : ''}${resolved.grade?.tracks ? selectField(resolved.grade.trackLabel || 'Trayecto', 'trackId', resolved.grade.tracks) : ''}${resolved.grade && (!resolved.grade.tracks || resolved.track) ? selectField('Unidad curricular', 'unitId', resolved.track?.units || resolved.grade.units) : ''}</section>`;
+  }
+  if (resolved.system?.careers) {
+    steps += `<section class="progressive-section"><p class="step-number">Paso 2</p><h2>Elegí la formación</h2>${selectField('Carrera', 'careerId', resolved.system.careers)}${resolved.career?.specialties?.length ? selectField('Especialidad', 'specialtyId', resolved.career.specialties) : ''}${resolved.specialty ? selectField('Plan', 'planId', resolved.specialty.plans) : resolved.career && !resolved.career.specialties?.length ? selectField('Plan', 'planId', resolved.career.plans) : ''}${resolved.plan ? selectField('Año', 'yearId', resolved.plan.years) : ''}${resolved.year?.units?.length ? selectField('Unidad curricular', 'unitId', resolved.year.units) : ''}${resolved.career?.catalogStatus === 'structure-only' ? '<div class="catalog-notice">El catálogo detallado de esta carrera se incorporará próximamente. Podés continuar con la opción personalizada.</div>' : ''}</section>`;
+  }
+  if (selection.custom) steps += `<section class="progressive-section"><p class="step-number">Configuración personalizada</p><h2>Contanos qué enseñás</h2><div class="field-grid"><label>Nivel o carrera<input data-custom-field="customLevel" value="${escapeHtml(selection.customLevel || '')}" placeholder="Ej: Curso de formación permanente"></label><label>Asignatura o unidad curricular<input data-custom-field="customSubject" value="${escapeHtml(selection.customSubject || '')}" placeholder="Ej: Taller de proyectos"></label></div></section>`;
+
+  const complete = selection.custom ? selection.customLevel && selection.customSubject : Boolean(resolved.curriculumUnit);
+  const summary = complete ? educationSummary(selection) : null;
   const days = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-  app.innerHTML = pageShell(`<section class="narrow-page"><div class="page-heading compact"><div><p class="eyebrow">Nuevo curso</p><h1>Contanos sobre tu curso</h1><p>Esta información ayudará a tu asistente a preparar materiales que se adapten a tu forma de enseñar.</p></div></div>
-    <form id="course-form" class="form-card">
-      <div class="form-section"><h2>Datos básicos</h2><div class="field-grid"><label class="wide">Nombre del curso<input name="name" required placeholder="Ej: Historia 3.º B"></label><label>Asignatura<input name="subject" required placeholder="Ej: Historia"></label><label>Nivel educativo<select name="level" required><option value="">Seleccionar</option><option>Educación Primaria</option><option>Educación Media — 1.º</option><option>Educación Media — 2.º</option><option>Educación Media — 3.º</option><option>Bachillerato — 4.º</option><option>Bachillerato — 5.º</option><option>Bachillerato — 6.º</option><option>Educación Terciaria</option></select></label><label>Grupo<input name="group" required placeholder="Ej: 3.º B"></label><label>País<select name="country"><option>Uruguay</option><option>Argentina</option><option>Chile</option><option>Otro</option></select></label></div></div>
-      <div class="form-section"><h2>Calendario</h2><div class="field-grid"><label>Fecha de inicio<input type="date" name="startDate" required value="2026-03-02"></label><label>Fecha de finalización<input type="date" name="endDate" required value="2026-11-27"></label><fieldset class="wide"><legend>Días de clase</legend><div class="day-picker">${days.map((day) => `<label><input type="checkbox" name="classDays" value="${day}"><span>${day.slice(0, 3)}</span></label>`).join('')}</div></fieldset><label>Duración de cada clase<select name="classDuration"><option value="45">45 minutos</option><option value="60">60 minutos</option><option value="90">90 minutos</option><option value="120">120 minutos</option></select></label></div></div>
-      <div class="form-section"><h2>Tu forma de enseñar</h2><div class="field-grid"><label class="wide">Metodología<select name="methodology"><option>Mixta</option><option>Aprendizaje basado en problemas</option><option>Resolución de problemas</option><option>Taller</option><option>Indagación y laboratorio</option><option>Expositiva</option></select></label><label class="wide">Preferencias del docente<textarea name="preferences" rows="4" placeholder="Ej: Prefiero clases participativas, actividades breves y ejemplos cercanos a la realidad del grupo."></textarea><small>Podés cambiar esto más adelante.</small></label></div></div>
-      <div class="form-actions"><a class="secondary-button" href="#/courses">Cancelar</a><button class="primary-button" type="submit">Crear curso ${icon('arrow')}</button></div>
-    </form></section>`, { back: { href: '#/courses', label: 'Mis cursos' }, className: 'page' });
-  document.querySelector('#course-form').addEventListener('submit', (event) => {
-    event.preventDefault();
-    const data = new FormData(event.currentTarget);
-    const course = createCourse({ ...Object.fromEntries(data.entries()), classDays: data.getAll('classDays') });
-    state.courses.unshift(course); persist(); navigate(`/course/${course.id}`);
+  const details = summary ? `<section class="progressive-section course-details"><p class="step-number">Último paso</p><h2>Completá los detalles</h2><div class="education-summary"><span>${icon('check')}</span><div><small>Tu curso</small><strong>${escapeHtml(summary.title)}</strong><p>${escapeHtml(summary.detail)}</p><em>${escapeHtml(summary.path.join(' → '))}</em></div><button type="button" data-reset-education>Cambiar</button></div><form id="course-form"><div class="field-grid"><label class="wide">Nombre para identificar el curso<input name="name" required value="${escapeHtml(summary.detail || summary.title)}"></label><label>Grupo<input name="group" required placeholder="Ej: 8.º 2"></label><label>Fecha de inicio<input type="date" name="startDate" required value="2026-03-02"></label><label>Fecha de finalización<input type="date" name="endDate" required value="2026-11-27"></label><fieldset class="wide"><legend>Días de clase</legend><div class="day-picker">${days.map(day => `<label><input type="checkbox" name="classDays" value="${day}"><span>${day.slice(0,3)}</span></label>`).join('')}</div></fieldset><label>Duración<select name="classDuration"><option value="45">45 minutos</option><option value="60">60 minutos</option><option value="90">90 minutos</option></select></label><label>Metodología<select name="methodology"><option>Mixta</option><option>Aprendizaje basado en problemas</option><option>Resolución de problemas</option><option>Taller</option><option>Expositiva</option></select></label><label class="wide">Preferencias del docente<textarea name="preferences" rows="3" placeholder="Ej: Actividades breves y ejemplos cercanos al grupo."></textarea></label></div><div class="form-actions"><a class="secondary-button" href="#/courses">Cancelar</a><button class="primary-button">Crear curso ${icon('arrow')}</button></div></form></section>` : '';
+  const fallback = selection.systemId && !selection.custom && !summary ? '<button type="button" class="fallback-choice" data-custom-education>Otro / No aparece mi curso</button>' : '';
+
+  app.innerHTML = pageShell(`<section class="narrow-page"><div class="page-heading compact"><div><p class="eyebrow">Nuevo curso</p><h1>Creá tu curso</h1><p>Te mostramos únicamente las opciones que corresponden a tu recorrido educativo.</p></div></div><div class="progressive-card">${steps}${fallback}${details}</div></section>`, { back: { href: '#/courses', label: 'Mis cursos' }, className: 'page' });
+  bindEducationForm(summary, resolved);
+}
+
+function bindEducationForm(summary, resolved) {
+  document.querySelectorAll('[data-education-key]').forEach(button => button.addEventListener('click', () => { state.educationDraft = { countryId: 'uy', [button.dataset.educationKey]: button.dataset.educationValue }; renderCreate(); }));
+  document.querySelectorAll('[data-custom-education]').forEach(button => button.addEventListener('click', () => { state.educationDraft = { countryId: 'uy', custom: true }; renderCreate(); }));
+  document.querySelectorAll('[data-education-select]').forEach(select => select.addEventListener('change', () => {
+    const order = ['programId', 'gradeId', 'trackId', 'careerId', 'specialtyId', 'planId', 'yearId', 'unitId'];
+    const key = select.dataset.educationSelect; const next = { ...state.educationDraft, [key]: select.value };
+    order.slice(order.indexOf(key) + 1).forEach(k => delete next[k]); state.educationDraft = next; renderCreate();
+  }));
+  document.querySelectorAll('[data-custom-field]').forEach(input => input.addEventListener('change', () => { state.educationDraft[input.dataset.customField] = input.value.trim(); renderCreate(); }));
+  document.querySelector('[data-reset-education]')?.addEventListener('click', () => { state.educationDraft = { countryId: 'uy' }; renderCreate(); });
+  document.querySelector('#course-form')?.addEventListener('submit', event => {
+    event.preventDefault(); const data = new FormData(event.currentTarget);
+    const course = createCourse({ ...Object.fromEntries(data.entries()), classDays: data.getAll('classDays'), country: 'Uruguay', subject: summary.detail.split(' · ').at(-1), level: summary.title, education: { ...state.educationDraft } });
+    state.courses.unshift(course); persist(); state.educationDraft = { countryId: 'uy' }; navigate(`/course/${course.id}`);
   });
 }
 
