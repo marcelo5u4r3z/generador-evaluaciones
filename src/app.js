@@ -1,6 +1,6 @@
-const STORAGE_KEY = 'nerio-courses-v1';
-const LEGACY_STORAGE_KEY = 'aula-prototype-courses-v1';
 const app = document.querySelector('#app');
+const nerioStorage = new NerioStorage();
+const nerioService = createNerioService(NERIO_CONFIG, nerioStorage);
 
 const state = {
   courses: loadCourses(),
@@ -9,19 +9,16 @@ const state = {
   messages: [],
   educationDraft: { countryId: 'uy' },
   handledActionKey: null,
+  activeConversationCourseId: null,
+  requestStatus: 'idle',
 };
 
 function loadCourses() {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY) || localStorage.getItem(LEGACY_STORAGE_KEY);
-    return stored ? JSON.parse(stored) : cloneDemoCourses();
-  } catch {
-    return cloneDemoCourses();
-  }
+  return nerioStorage.getCourses(cloneDemoCourses());
 }
 
 function persist() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state.courses));
+  nerioStorage.saveCourses(state.courses);
 }
 
 function parseRoute() {
@@ -55,6 +52,7 @@ function icon(name) {
     menu: '<path d="M4 6h16M4 12h16M4 18h16"/>',
     plus: '<path d="M12 5v14M5 12h14"/>',
     print: '<path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/>',
+    copy: '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
     send: '<path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/>',
     nerio: '<path d="M6 18V6M6.5 6.5l11 11M18 18V6"/><circle cx="20" cy="20" r="1.6" fill="currentColor" stroke="none"/>',
     upload: '<path d="M12 3v12m-5-7 5-5 5 5M5 21h14"/>',
@@ -169,39 +167,75 @@ function formatBytes(bytes) { return bytes < 1024 * 1024 ? `${Math.max(1, Math.r
 function replaceCourse(course) { state.courses = state.courses.map(c => c.id === course.id ? course : c); persist(); }
 
 function renderAgent(course) {
+  if (state.activeConversationCourseId !== course.id) {
+    state.activeConversationCourseId = course.id;
+    state.messages = nerioService.getConversation(course.id);
+    state.draft = nerioService.getArtifact(course.id);
+    state.requestStatus = 'idle';
+  }
   if (!state.messages.length) state.messages = [{ role: 'assistant', text: `Tengo presente dónde está ${course.name} y qué viene después. ¿Qué preparamos?` }];
   const actionKey = `${course.id}:${state.route.action}`;
-  if (QUICK_ACTIONS[state.route.action] && state.handledActionKey !== actionKey) {
-    state.messages.push({ role: 'user', text: QUICK_ACTIONS[state.route.action].prompt });
-    state.messages.push({ role: 'assistant', text: `Ya preparé un primer borrador con el contexto de ${course.name}. Podés editarlo o pedirme un cambio.` });
-    state.draft = generateDocument(state.route.action, course);
-    state.handledActionKey = actionKey;
-  }
-  const actions = Object.entries(QUICK_ACTIONS).map(([key, a]) => `<button class="quick-action" data-action="${key}">${icon(key === 'class' ? 'calendar' : key === 'replan' ? 'arrow' : 'file')} ${a.label}</button>`).join('');
+  const actions = Object.entries(QUICK_ACTIONS).map(([key, a]) => `<button class="quick-action" data-action="${key}" ${state.requestStatus === 'sending' ? 'disabled' : ''}>${icon(key === 'class' ? 'calendar' : key === 'replan' ? 'arrow' : 'file')} ${a.label}</button>`).join('');
   const messages = state.messages.map(m => `<div class="message ${m.role}"><span>${m.role === 'assistant' ? icon('nerio') : 'MS'}</span><div>${escapeHtml(m.text)}</div></div>`).join('');
-  app.innerHTML = pageShell(`<section class="agent-layout ${state.draft ? 'has-document' : ''}"><section class="chat-panel"><div class="agent-context"><span class="nerio-presence">${icon('nerio')}</span><div><p class="eyebrow">NERIO · Curso activo</p><h1>${escapeHtml(course.subject)}</h1><p>${escapeHtml(course.level)} · ${escapeHtml(course.group)}</p></div><span class="demo-status">Demostración</span></div><div class="conversation-intro"><h2>¿Qué preparamos?</h2><p>Podés escribirlo como se lo dirías a alguien que ya conoce tu curso.</p></div><div class="quick-actions">${actions}</div><div class="messages" id="messages">${messages}</div><form id="chat-form" class="composer"><textarea id="chat-input" rows="1" placeholder="Por ejemplo: Preparame la clase del viernes…" aria-label="Escribile a Nerio"></textarea><button aria-label="Pedirle a Nerio">${icon('send')}</button></form><p class="composer-note">Las respuestas están preparadas para esta demostración.</p></section>${state.draft ? documentPanel(state.draft) : `<aside class="document-placeholder"><span class="document-watermark">N</span><p class="eyebrow">Mesa de trabajo</p><h2>Lo que prepares con Nerio va a aparecer acá</h2><p>Podrás revisarlo, editarlo y llevarlo a clase.</p></aside>`}</section>`, { course, active: 'agent', className: 'agent-page' });
-  document.querySelectorAll('[data-action]').forEach(button => button.addEventListener('click', () => simulateAgent(button.dataset.action, course)));
-  document.querySelector('#chat-form').addEventListener('submit', event => { event.preventDefault(); const input = document.querySelector('#chat-input'); if (!input.value.trim()) return; const action = inferAction(input.value); state.messages.push({ role: 'user', text: input.value.trim() }); input.value = ''; simulateAgent(action, course, false); });
+  const activity = state.requestStatus === 'sending' ? `<div class="nerio-activity" role="status"><span></span><p>Nerio está preparando una propuesta…</p></div>` : state.requestStatus === 'error' ? `<div class="nerio-error" role="alert">No pude preparar esto ahora. Probá nuevamente.</div>` : '';
+  app.innerHTML = pageShell(`<section class="agent-layout ${state.draft ? 'has-document' : ''}"><section class="chat-panel"><div class="agent-context"><span class="nerio-presence">${icon('nerio')}</span><div><p class="eyebrow">NERIO · Curso activo</p><h1>${escapeHtml(course.subject)}</h1><p>${escapeHtml(course.level)} · ${escapeHtml(course.group)}</p></div><span class="demo-status">Demostración</span></div><div class="conversation-intro"><h2>¿Qué preparamos?</h2><p>Podés escribirlo como se lo dirías a alguien que ya conoce tu curso.</p></div><div class="quick-actions">${actions}</div><div class="messages" id="messages">${messages}${activity}</div><form id="chat-form" class="composer"><textarea id="chat-input" rows="1" placeholder="Por ejemplo: Preparame la clase del viernes…" aria-label="Escribile a Nerio" ${state.requestStatus === 'sending' ? 'disabled' : ''}></textarea><button aria-label="Pedirle a Nerio" ${state.requestStatus === 'sending' ? 'disabled' : ''}>${icon('send')}</button></form><p class="composer-note">Las respuestas están preparadas para esta demostración.</p></section>${state.draft ? documentPanel(state.draft) : `<aside class="document-placeholder"><span class="document-watermark">N</span><p class="eyebrow">Mesa de trabajo</p><h2>Lo que prepares con Nerio va a aparecer acá</h2><p>Podrás revisarlo, editarlo y llevarlo a clase.</p></aside>`}</section>`, { course, active: 'agent', className: 'agent-page' });
+  document.querySelectorAll('[data-action]').forEach(button => button.addEventListener('click', () => submitNerioRequest({ action: button.dataset.action, course })));
+  document.querySelector('#chat-form').addEventListener('submit', event => { event.preventDefault(); const input = document.querySelector('#chat-input'); if (!input.value.trim()) return; submitNerioRequest({ message: input.value.trim(), course }); });
   bindDocumentActions(course);
+  document.querySelector('#messages')?.scrollTo({ top: document.querySelector('#messages').scrollHeight, behavior: 'smooth' });
+  if (QUICK_ACTIONS[state.route.action] && state.handledActionKey !== actionKey) {
+    state.handledActionKey = actionKey;
+    queueMicrotask(() => submitNerioRequest({ action: state.route.action, course }));
+  }
 }
 
-function inferAction(text) { const t = text.toLowerCase(); if (t.includes('evalu')) return 'assessment'; if (t.includes('práct') || t.includes('pract')) return 'practice'; if (t.includes('planif') || t.includes('perd')) return 'replan'; return 'class'; }
-function simulateAgent(action, course, includeUser = true) {
-  if (includeUser) state.messages.push({ role: 'user', text: QUICK_ACTIONS[action].prompt });
-  state.messages.push({ role: 'assistant', text: action === 'replan' ? 'Preparé una propuesta sin modificar todavía tu calendario. Podés revisarla y pedirme cualquier ajuste.' : `Preparé un primer borrador considerando el avance de ${course.name}, tus preferencias y los contenidos registrados. Podés editarlo o pedirme cambios.` });
-  state.draft = generateDocument(action, course); renderAgent(course);
+async function submitNerioRequest({ message, action, course }) {
+  if (state.requestStatus === 'sending') return;
+  const text = message || QUICK_ACTIONS[action]?.prompt;
+  if (!text) return;
+  captureArtifactEdits(course);
+  state.requestStatus = 'sending';
+  state.messages = [...nerioService.getConversation(course.id), { role: 'user', text }];
+  renderAgent(course);
+  try {
+    const result = action
+      ? await nerioService.sendQuickAction({ action, course })
+      : await nerioService.send({ message: text, course });
+    state.messages = result.conversation;
+    if (result.artifact) state.draft = result.artifact;
+    state.requestStatus = 'success';
+  } catch {
+    state.requestStatus = 'error';
+  }
+  renderAgent(course);
 }
 
 function documentPanel(draft) {
-  return `<aside class="document-panel"><header><div><p class="eyebrow">Documento · ${escapeHtml(draft.status)}</p><input id="document-title" value="${escapeHtml(draft.title)}" aria-label="Título del documento"></div><div class="document-actions"><button id="print-document" class="icon-button" title="Imprimir o guardar como PDF" aria-label="Imprimir o guardar como PDF">${icon('print')}</button><button id="save-document" class="save-button">${draft.saved ? icon('check') + ' Guardado' : 'Guardar'}</button></div></header><div class="paper"><textarea id="document-body" aria-label="Contenido editable">${escapeHtml(draft.body)}</textarea></div><footer><span>El documento es editable.</span><button id="request-change" class="secondary-button">Pedirle un cambio a Nerio</button></footer></aside>`;
+  const date = new Intl.DateTimeFormat('es-UY', { dateStyle: 'medium' }).format(new Date(draft.createdAt || Date.now()));
+  return `<aside class="document-panel"><header><div><p class="eyebrow">${escapeHtml(artifactTypeLabel(draft.type))} · ${escapeHtml(date)}</p><input id="document-title" value="${escapeHtml(draft.title)}" aria-label="Título del documento"><small>${escapeHtml(draft.course)}</small></div><div class="document-actions"><button id="copy-document" class="icon-button" title="Copiar documento" aria-label="Copiar documento">${icon('copy')}</button><button id="print-document" class="icon-button" title="Imprimir o guardar como PDF" aria-label="Imprimir o guardar como PDF">${icon('print')}</button><button id="save-document" class="save-button">Guardar</button></div></header><div class="paper"><textarea id="document-body" aria-label="Contenido editable">${escapeHtml(draft.content)}</textarea></div><footer><span>El documento es editable y queda guardado en este dispositivo.</span><button id="request-change" class="secondary-button">Pedirle un cambio a Nerio</button></footer></aside>`;
+}
+
+function artifactTypeLabel(type) {
+  return { lesson: 'Plan de clase', assessment: 'Evaluación', worksheet: 'Práctico', plan: 'Planificación' }[type] || 'Documento';
 }
 
 function bindDocumentActions(course) {
   const save = document.querySelector('#save-document'); if (!save) return;
-  const sync = () => { state.draft.title = document.querySelector('#document-title').value; state.draft.body = document.querySelector('#document-body').value; };
-  save.addEventListener('click', () => { sync(); state.draft.saved = true; save.innerHTML = `${icon('check')} Guardado`; showToast('Borrador guardado localmente'); });
-  document.querySelector('#print-document').addEventListener('click', () => { sync(); window.print(); });
-  document.querySelector('#request-change').addEventListener('click', () => { sync(); const input = document.querySelector('#chat-input'); input.value = 'Quiero cambiar '; input.focus(); });
+  save.addEventListener('click', () => { captureArtifactEdits(course); save.innerHTML = `${icon('check')} Guardado`; showToast('Documento guardado'); });
+  document.querySelector('#print-document').addEventListener('click', () => { captureArtifactEdits(course); window.print(); });
+  document.querySelector('#copy-document').addEventListener('click', async () => {
+    captureArtifactEdits(course);
+    try { await navigator.clipboard.writeText(`${state.draft.title}\n\n${state.draft.content}`); showToast('Documento copiado'); }
+    catch { showToast('No se pudo copiar el documento'); }
+  });
+  document.querySelector('#request-change').addEventListener('click', () => { captureArtifactEdits(course); const input = document.querySelector('#chat-input'); input.value = 'Quiero cambiar '; input.focus(); });
+}
+
+function captureArtifactEdits(course) {
+  const title = document.querySelector('#document-title');
+  const content = document.querySelector('#document-body');
+  if (!state.draft || !title || !content) return;
+  state.draft = nerioService.saveArtifact(course.id, { ...state.draft, title: title.value, content: content.value });
 }
 
 function renderRegister(course) {

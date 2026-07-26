@@ -143,6 +143,6 @@ function generateDocument(action, course) {
   return { ...common, body: `PLAN DE CLASE\n\nCurso: ${course.name}\nTema: ${topic}\nDuración: ${course.classDuration} minutos\n\nObjetivos\n• Comprender las ideas principales de ${topic}.\n• Relacionar el nuevo contenido con lo trabajado anteriormente.\n\nInicio · 10 minutos\nRecuperar saberes previos con una pregunta disparadora y registrar las primeras hipótesis del grupo.\n\nDesarrollo · 25 minutos\nPresentar el tema a partir de una fuente breve. Trabajar en parejas para identificar ideas centrales y compartir conclusiones.\n\nCierre · 10 minutos\nConstruir una síntesis colectiva y responder una consigna de salida individual.\n\nRecursos\nPrograma del curso, fragmento de lectura y pizarrón.\n\nEvidencia de aprendizaje\nRespuesta de salida: una idea comprendida y una pregunta pendiente.` };
 }
 
-if (typeof module !== 'undefined') {
-  module.exports = { DEMO_COURSES, QUICK_ACTIONS, cloneDemoCourses, createCourse, addMaterial, registerSession, generateDocument };
-}
+const generatorExports = { DEMO_COURSES, QUICK_ACTIONS, cloneDemoCourses, createCourse, addMaterial, registerSession, generateDocument };
+Object.assign(typeof globalThis !== 'undefined' ? globalThis : window, generatorExports);
+if (typeof module !== 'undefined') module.exports = generatorExports;
