@@ -2,10 +2,10 @@
   "name": "generador-evaluaciones",
   "version": "0.1.0",
   "private": true,
-  "description": "MVP web para docentes que genera evaluaciones a partir de datos básicos.",
+  "description": "NERIO, prototipo de agente docente con catálogo educativo uruguayo.",
   "scripts": {
     "start": "python3 -m http.server 4173",
-    "test": "node tests/generator.test.js"
+    "test": "node tests/generator.test.js && node tests/agent.test.js"
   },
   "keywords": [
     "educacion",
