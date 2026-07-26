@@ -22,6 +22,17 @@
     return 'Replanificación del curso';
   }
 
+  function validateAIResult(result) {
+    const types = Object.values(ARTIFACT_TYPES);
+    if (!result || typeof result.message !== 'string' || !result.message.trim()) throw new Error('Nerio API returned an invalid response.');
+    if (result.artifact) {
+      if (!types.includes(result.artifact.type) || typeof result.artifact.title !== 'string' || typeof result.artifact.content !== 'string') {
+        throw new Error('Nerio API returned an invalid artifact.');
+      }
+    }
+    return result;
+  }
+
   function artifactContent(intent, context) {
     const topic = context.planning.pendingTopics[0] || context.planning.workedTopics.at(-1) || 'próximo contenido';
     const worked = context.planning.workedTopics.join(', ') || 'sin contenidos registrados';
@@ -64,6 +75,7 @@
           title: artifactTitle(intent, topic),
           course: courseContext.course.name,
           content: artifactContent(intent, courseContext),
+          format: 'markdown-latex',
           createdAt: now,
           updatedAt: now,
         },
@@ -89,14 +101,14 @@
           signal: controller.signal,
         });
         if (!response.ok) throw new Error('Nerio API request failed.');
-        return response.json();
+        return validateAIResult(await response.json());
       } finally {
         clearTimeout(timeout);
       }
     }
   }
 
-  const exported = { MockAIProvider, ApiAIProvider, ARTIFACT_TYPES, detectIntent };
+  const exported = { MockAIProvider, ApiAIProvider, ARTIFACT_TYPES, detectIntent, validateAIResult };
   Object.assign(globalScope, exported);
   if (typeof module !== 'undefined') module.exports = exported;
 })(typeof globalThis !== 'undefined' ? globalThis : window);

@@ -1,8 +1,9 @@
 (function nerioServiceModule(globalScope) {
   class NerioService {
-    constructor({ provider, storage }) {
+    constructor({ provider, storage, conversationWindowMessages = 12 }) {
       this.provider = provider;
       this.storage = storage;
+      this.conversationWindowMessages = conversationWindowMessages;
     }
 
     getConversation(courseId) { return this.storage.getConversation(courseId); }
@@ -10,10 +11,11 @@
 
     async send({ message, course }) {
       const conversation = this.getConversation(course.id);
+      const recentConversation = conversation.slice(-this.conversationWindowMessages);
       const currentArtifact = this.getArtifact(course.id);
       const courseContext = globalScope.buildCourseContext(course, currentArtifact ? [currentArtifact] : []);
       const userMessage = { id: `message-${Date.now()}-user`, role: 'user', text: message, createdAt: new Date().toISOString() };
-      const request = { message, courseContext, conversation, currentArtifact };
+      const request = { message, courseContext, conversation: recentConversation, currentArtifact };
       const result = await this.provider.generate(request);
       const assistantMessage = { id: `message-${Date.now()}-nerio`, role: 'assistant', text: result.message, createdAt: new Date().toISOString() };
       const updatedConversation = [...conversation, userMessage, assistantMessage];
@@ -37,7 +39,7 @@
     const provider = config.mode === 'api'
       ? new globalScope.ApiAIProvider({ apiBaseUrl: config.apiBaseUrl, timeoutMs: config.requestTimeoutMs })
       : new globalScope.MockAIProvider();
-    return new NerioService({ provider, storage });
+    return new NerioService({ provider, storage, conversationWindowMessages: config.conversationWindowMessages });
   }
 
   const exported = { NerioService, createNerioService };

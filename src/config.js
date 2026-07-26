@@ -1,9 +1,12 @@
 (function configModule(globalScope) {
+  const runtime = globalScope.NERIO_RUNTIME_CONFIG || {};
+  const apiBaseUrl = runtime.API_BASE_URL || runtime.apiBaseUrl || '';
+  const requestedMode = runtime.MODE || runtime.mode || 'mock';
   const NERIO_CONFIG = Object.freeze({
-    mode: 'mock',
-    apiBaseUrl: '/api',
+    mode: requestedMode === 'api' && apiBaseUrl ? 'api' : 'mock',
+    apiBaseUrl,
     requestTimeoutMs: 30000,
-    ...(globalScope.NERIO_RUNTIME_CONFIG || {}),
+    conversationWindowMessages: 12,
   });
 
   globalScope.NERIO_CONFIG = NERIO_CONFIG;

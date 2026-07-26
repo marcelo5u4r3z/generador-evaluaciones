@@ -5,7 +5,15 @@
   "description": "NERIO, prototipo de agente docente con catálogo educativo uruguayo.",
   "scripts": {
     "start": "python3 -m http.server 4173",
-    "test": "node tests/generator.test.js && node tests/agent.test.js"
+    "server": "node server/http-server.js",
+    "server:env": "node --env-file=.env server/http-server.js",
+    "test": "node tests/generator.test.js && node tests/agent.test.js && node tests/openai-provider.test.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "openai": "^6.0.0"
   },
   "keywords": [
     "educacion",

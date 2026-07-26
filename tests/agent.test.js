@@ -59,7 +59,7 @@ async function run() {
   service.saveArtifact(course.id, edited);
   assert.equal(storage.getArtifact(course.id).title, 'Versión editada localmente');
 
-  const handler = createChatHandler(provider);
+  const handler = createChatHandler(provider, { logger: { info() {}, error() {} }, model: 'mock' });
   const apiResponse = await handler({ message: 'Preparame una clase', courseContext: context, conversation: [] });
   assert.equal(apiResponse.status, 200);
   assert.equal(apiResponse.body.artifact.type, 'lesson');
