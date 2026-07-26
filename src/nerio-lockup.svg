@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 86" role="img" aria-labelledby="title desc">
+  <title id="title">NERIO</title>
+  <desc id="desc">Tu agente docente.</desc>
+  <g transform="translate(2 11)">
+    <rect width="64" height="64" rx="18" fill="#173b36"/>
+    <rect x="12" y="12" width="10" height="40" rx="5" fill="#F8F5EC"/>
+    <path d="M18 17L46 47" fill="none" stroke="#F8F5EC" stroke-width="10" stroke-linecap="round"/>
+    <rect x="42" y="12" width="10" height="40" rx="5" fill="#F8F5EC"/>
+    <circle cx="54" cy="54" r="4" fill="#C97955"/>
+  </g>
+  <text x="88" y="44" fill="#172421" font-family="Manrope, Arial, sans-serif" font-size="34" font-weight="700" letter-spacing="6">NERIO</text>
+  <text x="89" y="69" fill="#68746F" font-family="Manrope, Arial, sans-serif" font-size="14" font-weight="500">Tu agente docente.</text>
+</svg>
