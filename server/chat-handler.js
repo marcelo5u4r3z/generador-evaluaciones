@@ -32,9 +32,22 @@ function createChatHandler(provider, { logger = console, model = 'unknown' } = {
       const result = validateChatResponse(await provider.generate(request));
       logger.info(JSON.stringify({ timestamp: new Date().toISOString(), operation: 'chat', model, success: true, latencyMs: Date.now() - startedAt }));
       return { status: 200, body: { message: result.message, artifact: result.artifact || null } };
-    } catch (error) {
-      logger.error(JSON.stringify({ timestamp: new Date().toISOString(), operation: 'chat', model, success: false, latencyMs: Date.now() - startedAt, errorType: error.name }));
-      return { status: 503, body: { error: 'provider_unavailable', message: 'No pude preparar esto ahora. Probá nuevamente.' } };
+   } catch (error) {
+  logger.error('OPENAI ERROR:', {
+    name: error?.name,
+    message: error?.message,
+    status: error?.status,
+    code: error?.code,
+    type: error?.type,
+    param: error?.param,
+    stack: error?.stack
+  });
+
+  return {
+    status: 503,
+    body: {
+      error: 'provider_unavailable',
+      message: 'No pude preparar esto ahora. Probá nuevamente.'
     }
   };
 }
