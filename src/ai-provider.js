@@ -92,10 +92,10 @@
   }
 
   class ApiAIProvider {
-    constructor({ apiBaseUrl, timeoutMs = 30000, fetchImpl = globalScope.fetch } = {}) {
+    constructor({ apiBaseUrl, timeoutMs = 30000, fetchImpl } = {}) {
       this.apiBaseUrl = normalizeApiBaseUrl(apiBaseUrl);
       this.timeoutMs = timeoutMs;
-      this.fetchImpl = fetchImpl;
+      this.fetchImpl = fetchImpl || ((...args) => globalScope.fetch(...args));
     }
 
     async generate(request) {
