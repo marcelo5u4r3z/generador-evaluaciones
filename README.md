@@ -85,11 +85,12 @@ Para usar el backend local desde la interfaz, editar únicamente la configuraci�
 ```js
 window.NERIO_RUNTIME_CONFIG = {
   MODE: 'api',
-  API_BASE_URL: 'http://localhost:8787/api',
+  API_BASE_URL: 'http://localhost:8787',
 };
 ```
 
 Si `MODE` es `mock` o `API_BASE_URL` está vacío, NERIO permanece en demostración y no intenta aparentar una conexión real.
+El cliente normaliza una URL base con o sin el sufijo `/api` (e incluso una URL copiada como `/api/chat`) y siempre envía la conversación a `POST /api/chat`.
 
 ### Desplegar Nerio API
 
@@ -113,7 +114,7 @@ El Start Command es `npm run server`, que ejecuta directamente `server/index.js`
 ```js
 window.NERIO_RUNTIME_CONFIG = {
   MODE: 'api',
-  API_BASE_URL: 'https://<servicio>.onrender.com/api',
+  API_BASE_URL: 'https://<servicio>.onrender.com',
 };
 ```
 
@@ -122,6 +123,15 @@ window.NERIO_RUNTIME_CONFIG = {
 5. Probar primero `/api/health` y luego una solicitud breve desde un curso.
 
 `API_BASE_URL` es pública por diseño; `OPENAI_API_KEY` no lo es y nunca debe copiarse a esta configuración.
+
+### Si Nerio responde que no pudo preparar el material
+
+1. Ejecutar `curl https://<servicio>.onrender.com/api/health`. Debe responder `200` y mostrar `"providerConfigured":true`.
+2. Confirmar en GitHub Pages que `MODE` sea `api` y que `API_BASE_URL` sea la URL pública del **Web Service**, no la URL del sitio estático.
+3. Reintentar una solicitud y revisar el log del Web Service en Render. El servidor registra estado, código y mensaje técnico del proveedor, pero redacta claves y encabezados de autorización; el navegador continúa recibiendo únicamente el mensaje seguro.
+4. Si el log informa un problema de autenticación, modelo, cuota o límite, corregir la variable correspondiente en Render y volver a desplegar. No copiar la clave al frontend para intentar resolverlo.
+
+La frase `Haceme un práctico de fracciones` utiliza el mismo `POST /api/chat` que las acciones rápidas. La prueba de integración cubre ese recorrido contra un servidor HTTP real y verifica que vuelve un artifact `worksheet`.
 
 ### Prompt, continuidad y rigor académico
 

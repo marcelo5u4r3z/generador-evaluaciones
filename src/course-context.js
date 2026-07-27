@@ -1,29 +1,18 @@
 (function courseContextModule(globalScope) {
-  function asArray(value) {
-    return Array.isArray(value) ? value : [];
-  }
-
   function buildCourseContext(course, previousArtifacts = []) {
     if (!course?.id) throw new Error('A course with an id is required.');
     const education = course.education && globalScope.resolveEducationSelection
       ? globalScope.resolveEducationSelection(course.education)
       : {};
 
-    const workedTopics = asArray(course.workedTopics);
-    const pendingTopics = asArray(course.pendingTopics);
-    const classDays = asArray(course.classDays);
-    const materials = asArray(course.materials);
-    const sessions = asArray(course.sessions);
-    const artifacts = asArray(previousArtifacts);
-
     return {
       courseId: course.id,
       course: {
-        name: course.name || '',
-        subject: course.subject || '',
-        level: course.level || '',
-        group: course.group || '',
-        country: course.country || 'Uruguay',
+        name: course.name,
+        subject: course.subject,
+        level: course.level,
+        group: course.group,
+        country: course.country,
       },
       education: {
         system: education.system?.name || null,
@@ -35,24 +24,24 @@
         specialty: education.specialty?.name || null,
         gradeOrYear: education.grade?.name || education.year?.name || null,
         track: education.track?.name || null,
-        curriculumUnit: education.curriculumUnit?.name || course.subject || null,
+        curriculumUnit: education.curriculumUnit?.name || course.subject,
         officialProgram: education.curriculumUnit?.officialProgram || null,
       },
       planning: {
-        progress: Number.isFinite(Number(course.progress)) ? Number(course.progress) : null,
-        nextClass: course.nextClass || null,
-        workedTopics: [...workedTopics],
-        pendingTopics: [...pendingTopics],
+        progress: course.progress,
+        nextClass: course.nextClass,
+        workedTopics: [...course.workedTopics],
+        pendingTopics: [...course.pendingTopics],
       },
       teaching: {
-        methodology: course.methodology || null,
-        preferences: course.preferences || null,
-        classDays: [...classDays],
-        classDurationMinutes: Number.isFinite(Number(course.classDuration)) ? Number(course.classDuration) : null,
+        methodology: course.methodology,
+        preferences: course.preferences,
+        classDays: [...course.classDays],
+        classDurationMinutes: course.classDuration,
       },
-      materials: materials.map(({ id, name, type, date, size } = {}) => ({ id, name, type, date, size })),
-      sessions: sessions.map(({ id, date, status, topics, note } = {}) => ({ id, date, status, topics: [...asArray(topics)], note })),
-      previousArtifacts: artifacts.map(({ id, type, title, createdAt } = {}) => ({ id, type, title, createdAt })),
+      materials: course.materials.map(({ id, name, type, date, size }) => ({ id, name, type, date, size })),
+      sessions: course.sessions.map(({ id, date, status, topics, note }) => ({ id, date, status, topics: [...(topics || [])], note })),
+      previousArtifacts: previousArtifacts.map(({ id, type, title, createdAt }) => ({ id, type, title, createdAt })),
     };
   }
 

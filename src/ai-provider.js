@@ -33,6 +33,14 @@
     return result;
   }
 
+  function normalizeApiBaseUrl(value) {
+    const baseUrl = String(value || '').trim().replace(/\/+$/, '');
+    if (!baseUrl) return '';
+    if (baseUrl.endsWith('/api/chat')) return baseUrl.slice(0, -5);
+    if (baseUrl.endsWith('/api')) return baseUrl;
+    return `${baseUrl}/api`;
+  }
+
   function artifactContent(intent, context) {
     const topic = context.planning.pendingTopics[0] || context.planning.workedTopics.at(-1) || 'próximo contenido';
     const worked = context.planning.workedTopics.join(', ') || 'sin contenidos registrados';
@@ -85,7 +93,7 @@
 
   class ApiAIProvider {
     constructor({ apiBaseUrl, timeoutMs = 30000, fetchImpl = globalScope.fetch } = {}) {
-      this.apiBaseUrl = apiBaseUrl;
+      this.apiBaseUrl = normalizeApiBaseUrl(apiBaseUrl);
       this.timeoutMs = timeoutMs;
       this.fetchImpl = fetchImpl;
     }
@@ -100,7 +108,15 @@
           body: JSON.stringify(request),
           signal: controller.signal,
         });
-        if (!response.ok) throw new Error('Nerio API request failed.');
+        if (!response.ok) {
+          let code = 'unknown_error';
+          try { code = (await response.json()).error || code; } catch {}
+          const error = new Error(`Nerio API request failed (${response.status}, ${code}).`);
+          error.name = 'NerioApiError';
+          error.status = response.status;
+          error.code = code;
+          throw error;
+        }
         return validateAIResult(await response.json());
       } finally {
         clearTimeout(timeout);
@@ -108,7 +124,7 @@
     }
   }
 
-  const exported = { MockAIProvider, ApiAIProvider, ARTIFACT_TYPES, detectIntent, validateAIResult };
+  const exported = { MockAIProvider, ApiAIProvider, ARTIFACT_TYPES, detectIntent, validateAIResult, normalizeApiBaseUrl };
   Object.assign(globalScope, exported);
   if (typeof module !== 'undefined') module.exports = exported;
 })(typeof globalThis !== 'undefined' ? globalThis : window);
