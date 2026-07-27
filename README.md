@@ -77,7 +77,8 @@ Variables del servidor:
 - `OPENAI_TIMEOUT_MS`: timeout del SDK, inicialmente 45 segundos.
 - `OPENAI_MAX_OUTPUT_TOKENS`: máximo de salida, inicialmente 6.000 tokens.
 - `ALLOWED_ORIGINS`: orígenes CORS separados por coma.
-- `PORT`: puerto HTTP.
+- `PORT`: puerto HTTP asignado por Render; localmente usa 8787 si no existe.
+- `HOST`: interfaz de red; usa `0.0.0.0` para Render.
 
 Para usar el backend local desde la interfaz, editar únicamente la configuración pública de `src/runtime-config.js`:
 
@@ -102,6 +103,7 @@ Para el MVP recomendamos **Render Web Service** por su despliegue directo desde 
 6. Desplegar y verificar `https://<servicio>.onrender.com/api/health`.
 
 No guardar la clave en `render.yaml`: su entrada está marcada `sync: false` y debe completarse en el panel seguro del servicio.
+El Start Command es `npm run server`. El entrypoint conserva el proceso Node, escucha explícitamente en `0.0.0.0` y utiliza el `PORT` que Render inyecta. La inicialización del SDK de OpenAI se difiere hasta el primer `POST /api/chat`, por lo que `/api/health` y el arranque no dependen de una llamada al proveedor.
 
 ### Conectar GitHub Pages
 

@@ -7,7 +7,7 @@
     "start": "python3 -m http.server 4173",
     "server": "node server/http-server.js",
     "server:env": "node --env-file=.env server/http-server.js",
-    "test": "node tests/generator.test.js && node tests/agent.test.js && node tests/openai-provider.test.js"
+    "test": "node tests/generator.test.js && node tests/agent.test.js && node tests/openai-provider.test.js && node tests/server-entrypoint.test.js"
   },
   "engines": {
     "node": ">=20"

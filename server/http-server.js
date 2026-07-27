@@ -40,12 +40,19 @@ function readJson(request) {
 }
 
 function createServer({ config = loadServerConfig(), provider, logger = console } = {}) {
-  const activeProvider = provider || (config.openaiApiKey ? new OpenAIProvider({
-    apiKey: config.openaiApiKey,
-    model: config.openaiModel,
-    timeoutMs: config.openaiTimeoutMs,
-    maxOutputTokens: config.maxOutputTokens,
-  }) : { generate: async () => { throw new Error('OpenAI is not configured.'); } });
+  let openaiProvider;
+  const activeProvider = provider || {
+    async generate(request) {
+      if (!config.openaiApiKey) throw new Error('OpenAI is not configured.');
+      if (!openaiProvider) openaiProvider = new OpenAIProvider({
+        apiKey: config.openaiApiKey,
+        model: config.openaiModel,
+        timeoutMs: config.openaiTimeoutMs,
+        maxOutputTokens: config.maxOutputTokens,
+      });
+      return openaiProvider.generate(request);
+    },
+  };
   const chatHandler = createChatHandler(activeProvider, { logger, model: config.openaiModel });
 
   return http.createServer(async (request, response) => {
@@ -69,11 +76,47 @@ function createServer({ config = loadServerConfig(), provider, logger = console 
   });
 }
 
-if (require.main === module) {
-  const config = loadServerConfig();
-  createServer({ config }).listen(config.port, () => {
-    console.info(`NERIO API listening on port ${config.port}; model=${config.openaiModel}; providerConfigured=${Boolean(config.openaiApiKey)}`);
+function startServer({ config = loadServerConfig(), logger = console } = {}) {
+  return new Promise((resolve, reject) => {
+    let server;
+    try {
+      server = createServer({ config, logger });
+    } catch (error) {
+      logger.error(`NERIO API could not initialize: ${error.message}`);
+      reject(error);
+      return;
+    }
+    const onError = (error) => {
+      logger.error(`NERIO API failed to listen on ${config.host}:${config.port}: ${error.message}`);
+      reject(error);
+    };
+    server.once('error', onError);
+    server.listen(config.port, config.host, () => {
+      server.off('error', onError);
+      logger.info(`NERIO API listening on http://${config.host}:${config.port}; model=${config.openaiModel}; providerConfigured=${Boolean(config.openaiApiKey)}`);
+      resolve(server);
+    });
   });
 }
 
-module.exports = { createServer, corsHeaders, readJson };
+if (require.main === module) {
+  const config = loadServerConfig();
+  startServer({ config }).then((server) => {
+    const shutdown = (signal) => {
+      console.info(`NERIO API received ${signal}; closing server.`);
+      server.close((error) => {
+        if (error) {
+          console.error(`NERIO API shutdown failed: ${error.message}`);
+          process.exitCode = 1;
+        }
+      });
+    };
+    process.once('SIGTERM', () => shutdown('SIGTERM'));
+    process.once('SIGINT', () => shutdown('SIGINT'));
+  }).catch((error) => {
+    console.error(`NERIO API startup failed: ${error.stack || error.message}`);
+    process.exitCode = 1;
+  });
+}
+
+module.exports = { createServer, startServer, corsHeaders, readJson };

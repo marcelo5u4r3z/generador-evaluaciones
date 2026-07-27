@@ -12,6 +12,7 @@ function numberFromEnv(value, fallback) {
 function loadServerConfig(env = process.env) {
   return Object.freeze({
     port: numberFromEnv(env.PORT, 8787),
+    host: env.HOST || '0.0.0.0',
     openaiApiKey: env.OPENAI_API_KEY || '',
     openaiModel: env.OPENAI_MODEL || 'gpt-5-mini',
     openaiTimeoutMs: numberFromEnv(env.OPENAI_TIMEOUT_MS, 45000),
