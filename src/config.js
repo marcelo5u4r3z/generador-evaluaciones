@@ -5,7 +5,7 @@
   const NERIO_CONFIG = Object.freeze({
     mode: requestedMode === 'api' && apiBaseUrl ? 'api' : 'mock',
     apiBaseUrl,
-    requestTimeoutMs: 30000,
+    requestTimeoutMs: 120000,
     conversationWindowMessages: 12,
   });
 
