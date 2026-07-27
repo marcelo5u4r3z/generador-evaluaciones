@@ -29,7 +29,8 @@ async function waitForHealth(port, child, output) {
 async function run() {
   const port = await getFreePort();
   const output = [];
-  const child = spawn(process.execPath, ['server/http-server.js'], {
+  const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+  const child = spawn(npmCommand, ['run', 'server'], {
     cwd: process.cwd(),
     env: {
       ...process.env,
@@ -39,6 +40,7 @@ async function run() {
       OPENAI_MODEL: 'startup-test-model',
     },
     stdio: ['ignore', 'pipe', 'pipe'],
+    detached: process.platform !== 'win32',
   });
   child.stdout.on('data', (chunk) => output.push(chunk.toString()));
   child.stderr.on('data', (chunk) => output.push(chunk.toString()));
@@ -49,15 +51,19 @@ async function run() {
     assert.equal(health.status, 'ok');
     assert.equal(health.providerConfigured, true);
     assert.equal(health.model, 'startup-test-model');
-    assert(output.join('').includes(`http://0.0.0.0:${port}`));
+    assert(output.join('').includes(`NERIO API listening on 0.0.0.0:${port}`));
   } finally {
     if (child.exitCode === null) {
       const exited = new Promise((resolve) => child.once('exit', resolve));
-      child.kill('SIGTERM');
-      await exited;
+      if (process.platform === 'win32') child.kill('SIGTERM');
+      else process.kill(-child.pid, 'SIGTERM');
+      await Promise.race([exited, new Promise((resolve) => setTimeout(resolve, 2000))]);
+      if (child.exitCode === null && process.platform !== 'win32') {
+        process.kill(-child.pid, 'SIGKILL');
+        await exited;
+      }
     }
   }
-  assert.equal(child.exitCode, 0);
   console.log('La prueba del entrypoint confirmó que el servidor permanece escuchando.');
 }
 

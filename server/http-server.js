@@ -76,47 +76,4 @@ function createServer({ config = loadServerConfig(), provider, logger = console 
   });
 }
 
-function startServer({ config = loadServerConfig(), logger = console } = {}) {
-  return new Promise((resolve, reject) => {
-    let server;
-    try {
-      server = createServer({ config, logger });
-    } catch (error) {
-      logger.error(`NERIO API could not initialize: ${error.message}`);
-      reject(error);
-      return;
-    }
-    const onError = (error) => {
-      logger.error(`NERIO API failed to listen on ${config.host}:${config.port}: ${error.message}`);
-      reject(error);
-    };
-    server.once('error', onError);
-    server.listen(config.port, config.host, () => {
-      server.off('error', onError);
-      logger.info(`NERIO API listening on http://${config.host}:${config.port}; model=${config.openaiModel}; providerConfigured=${Boolean(config.openaiApiKey)}`);
-      resolve(server);
-    });
-  });
-}
-
-if (require.main === module) {
-  const config = loadServerConfig();
-  startServer({ config }).then((server) => {
-    const shutdown = (signal) => {
-      console.info(`NERIO API received ${signal}; closing server.`);
-      server.close((error) => {
-        if (error) {
-          console.error(`NERIO API shutdown failed: ${error.message}`);
-          process.exitCode = 1;
-        }
-      });
-    };
-    process.once('SIGTERM', () => shutdown('SIGTERM'));
-    process.once('SIGINT', () => shutdown('SIGINT'));
-  }).catch((error) => {
-    console.error(`NERIO API startup failed: ${error.stack || error.message}`);
-    process.exitCode = 1;
-  });
-}
-
-module.exports = { createServer, startServer, corsHeaders, readJson };
+module.exports = { createServer, corsHeaders, readJson };

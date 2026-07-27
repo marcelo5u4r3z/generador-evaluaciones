@@ -103,7 +103,7 @@ Para el MVP recomendamos **Render Web Service** por su despliegue directo desde 
 6. Desplegar y verificar `https://<servicio>.onrender.com/api/health`.
 
 No guardar la clave en `render.yaml`: su entrada está marcada `sync: false` y debe completarse en el panel seguro del servicio.
-El Start Command es `npm run server`. El entrypoint conserva el proceso Node, escucha explícitamente en `0.0.0.0` y utiliza el `PORT` que Render inyecta. La inicialización del SDK de OpenAI se difiere hasta el primer `POST /api/chat`, por lo que `/api/health` y el arranque no dependen de una llamada al proveedor.
+El Start Command es `npm run server`, que ejecuta directamente `server/index.js`. Ese entrypoint llama a `server.listen(PORT, '0.0.0.0', ...)` al cargarse y utiliza el `PORT` que Render inyecta. La inicialización del SDK de OpenAI se difiere hasta el primer `POST /api/chat`, por lo que `/api/health` y el arranque no dependen de una llamada al proveedor.
 
 ### Conectar GitHub Pages
 
